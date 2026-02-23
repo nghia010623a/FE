@@ -17,7 +17,7 @@ document.getElementById("showMenu")
 async function loadPage(page) {
     try {
         let response = await fetch(
-            `http://localhost:8080/test/showMenu?pageNum=${page}&pageSize=${pageSize}`,
+            `https://e573-116-96-46-116.ngrok-free.app/test/showMenu?pageNum=${page}&pageSize=${pageSize}`,
             {
                 method: "GET",
                 headers: {
@@ -31,7 +31,7 @@ async function loadPage(page) {
         if (response.status === 401) {
 
             const refreshRes = await fetch(
-                `http://localhost:8080/test/refreshAccesstoken`,
+                `https://e573-116-96-46-116.ngrok-free.app/test/refreshAccesstoken`,
                 {
                     method: "GET",
                     headers: {
@@ -57,7 +57,7 @@ async function loadPage(page) {
             {
             // 🔁 GỌI LẠI API CHÍNH
             response = await fetch(
-                `http://localhost:8080/test/showMenu?pageNum=${page}&pageSize=${pageSize}`,
+                `https://e573-116-96-46-116.ngrok-free.app/test/showMenu?pageNum=${page}&pageSize=${pageSize}`,
                 {
                     method: "GET",
                     headers: {
@@ -180,7 +180,7 @@ function closeAccount() {
 }
  async function logout()
 {
-    const response=await fetch(`http://localhost:8080/test/logout`,
+    const response=await fetch(`https://e573-116-96-46-116.ngrok-free.app/test/logout`,
     {
       method: "GET"
       ,credentials:"include"
