@@ -8,7 +8,7 @@ form.addEventListener("submit", async (e) => {
     const password = document.getElementById("password").value;
 
     try {
-        const response = await fetch("https://e38e-116-96-46-116.ngrok-free.app/test/checkLogin", {
+        const response = await fetch("https://bae9-116-96-46-116.ngrok-free.app/test/checkLogin", {
             method: "POST",
             credentials: "include", /* 3 giá trị của credentials
                                     Giá trị	Ý nghĩa
