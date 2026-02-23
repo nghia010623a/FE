@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng ký tài khoản</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #f39c12, #c0392b);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .register-box {
+            background-color: white;
+            padding: 30px;
+            width: 350px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        h2 {
+            text-align: center;
+            color: #c0392b;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #c0392b;
+            color: white;
+            border: none;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #a93226;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .login-link a {
+            color: #c0392b;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="register-box">
+    <h2>🍛 Đăng ký</h2>
+
+    <input type="text" id="username" placeholder="Tên đăng nhập">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Mật khẩu">
+    <input type="password" id="confirmPassword" placeholder="Nhập lại mật khẩu">
+
+    <button onclick="register()">Đăng ký</button>
+
+    <div class="login-link">
+        Đã có tài khoản?
+        <a href="login.html">Đăng nhập</a>
+    </div>
+</div>
+
+<script>
+    function register() {
+        const username = document.getElementById("username").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+
+        if (!username || !email || !password || !confirmPassword) {
+            alert("❌ Vui lòng nhập đầy đủ thông tin");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            alert("❌ Mật khẩu không khớp");
+            return;
+        }
+
+        // Demo – sau này thay bằng fetch gọi backend
+        alert("✅ Đăng ký thành công!");
+
+        // Ví dụ redirect
+        // window.location.href = "login.html";
+    }
+</script>
+
+</body>
+</html>

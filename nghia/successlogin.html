@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Indian Food Corner</title>
+    <style>
+        .food-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 60px;
+    padding: 20px;
+}
+
+.food-card {
+    background: #e8e3e3;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    column-gap: 40px;
+    gap:19px;
+    justify-content: space-between;
+}
+
+.food-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.15);
+}
+
+.food-card h3 {
+    margin: 0;
+    color: #333;
+    font-size: 20px;
+}
+
+.food-price {
+    color: #e53935;
+    font-weight: 600;
+    margin: 8px 0;
+}
+
+.food-detail {
+    color: #666;
+    font-size: 14px;
+    flex-grow: 1;
+}
+
+.food-card button {
+    margin-top: 15px;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.food-card button:hover {
+    opacity: 0.9;
+    transform: scale(1.03);
+}
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #fff8f0;
+        }
+
+        header {
+            background-color: #c0392b;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        nav {
+            background-color: #a93226;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+        }
+
+        nav button {
+            background-color: #f1c40f;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        nav button:hover {
+            background-color: #f39c12;
+        }
+
+        .container {
+            padding: 30px;
+            text-align: center;
+        }
+
+        .menu {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .food {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px auto;
+            width: 300px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        /* dang den flow// idletime, gui kem post/fresh/load mon an tu database */
+        footer {
+            margin-top: 40px;
+            background-color: #c0392b;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🍛 Indian Food Corner 🍛</h1>
+    <p>Hương vị Ấn Độ đích thực</p>
+</header>
+
+
+<button
+    style="position:absolute;right:130px;top:5px;font-size:18px;"
+    onclick="openCart()">
+    🛒 Giỏ hàng (<span id="cartCount">0</span>)
+</button>
+<button onmouseover="openAccount()" style="position:absolute;right:10px;top:5px;font-size:18px;padding:5px" >
+    Tài khoản
+</button>
+<!-- POPUP GIỎ HÀNG -->
+<div id="cartModal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+    z-index:999;
+">
+    <div style="
+        background:white;
+        width:400px;
+        margin:80px auto;
+        padding:20px;
+        border-radius:10px;
+    ">
+        <h2>🛒 Giỏ hàng</h2>
+
+        <div id="cartItems"></div>
+
+        <hr>
+        <b>Tổng tiền: <span id="totalPrice">0</span> VNĐ</b>
+
+        <br><br>
+        <button onclick="payment()">Thanh toán</button>
+        <!-- QR THANH TOÁN -->
+<div id="qrBox" style="
+display:none;
+margin-top:20px;
+text-align:center;
+">
+<h3>Quét mã QR để chuyển khoản</h3>
+<div id="qrcode"></div>
+<p style="color:#666;font-size:14px;">
+    Sau khi chuyển khoản, vui lòng chờ xác nhận
+</p>
+</div>
+        <button onclick="closeCart()">Đóng</button>
+    </div>
+</div>
+<button style="position:absolute;right:5px;top:0px;font-size:20px;" onclick="displayUser()" id="user">
+</button>
+
+<nav>
+    <button onclick="showHome()">Trang chủ</button>
+    <button id="showMenu">Menu</button>
+    <button onclick="orderFood()">Đặt món</button>
+    <button onclick="showContact()">Liên hệ</button>
+</nav>
+<div id="detailAccount" style="
+    display:none;
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:rgba(0,0,0,0.5);
+    z-index:999;
+">
+
+    <!-- Box nội dung -->
+    <div style="
+        position: relative;
+        top:10px;
+        margin-right:1px;
+        width:300px;
+        background:rgb(99, 95, 95);
+        /* margin:100px auto; */
+        padding:20px;
+        border-radius:8px;
+    ">
+
+        <!-- Nút đóng -->
+        <button onclick="closeAccount()"
+                style="position:absolute;top:5px;right:5px;">❌</button>
+
+        <h3>Tài khoản</h3>
+
+        <ul style="list-style:none;padding:0;">
+            <li style="margin:10px 0;">
+                <button onclick="showInfo()">📄 Thông tin tài khoản</button>
+            </li>
+            <li style="margin:10px 0;">
+                <button onclick="showHistory()">🧾 Lịch sử mua</button>
+            </li>
+            <li style="margin:10px 0;">
+                <button onclick="logout()">🚪 Đăng xuất</button>
+            </li>
+        </ul>
+
+        <!-- Nội dung chi tiết -->
+        <div id="accountContent" style="margin-top:15px;"></div>
+    </div>
+</div>
+<div class="container">
+    <div id="home">
+        <h2>Chào mừng bạn!</h2>
+        <p>Thưởng thức những món ăn truyền thống của Ấn Độ 🇮🇳</p>
+
+<div id="food-container"></div>
+
+<button id="prevPage">-</button>
+<button id="nextPage">+</button>
+    </div>
+
+    <div id="menu" class="menu">
+        <h2>📜 Thực đơn</h2>
+
+        <div class="food">🍗 Chicken Curry – 120.000đ</div>
+        <div class="food">🥘 Butter Chicken – 150.000đ</div>
+        <div class="food">🍚 Biryani – 130.000đ</div>
+        <div class="food">🫓 Naan Bread – 30.000đ</div>
+    </div>
+
+    <div id="contact" class="menu">
+        <h2>📞 Liên hệ</h2>
+        <p>📍 Hà Nội</p>
+        <p>☎️ 0123 456 789</p>
+        <p>📧 indianfood@gmail.com</p>
+    </div>
+</div>
+
+<footer>
+    © 2026 Indian Food Corner
+</footer>
+
+<script src="main.js">
+    
+</script><script src="successlogin.js">
+    
+</script>
+   
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+</body>
+</html>
