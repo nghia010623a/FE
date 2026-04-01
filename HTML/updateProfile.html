@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cập nhật thông tin - Bingchun</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            /* Design System Tokens translated to CSS Variables */
+            --primary: #86a5a9;
+            --primary-container: #50e1f9;
+            --on-primary-container: #004d58;
+            --surface: #f6fafe;
+            --surface-container-low: #eef4fa;
+            --surface-container-lowest: #ffffff;
+            --on-surface: #2a343a;
+            --on-surface-variant: #566167;
+            --outline-variant: rgba(169, 179, 187, 0.15);
+            --headline-font: 'Plus Jakarta Sans', sans-serif;
+            --body-font: 'Be Vietnam Pro', sans-serif;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-blur: 16px;
+            --shadow-ambient: 0 20px 40px rgba(0, 105, 119, 0.06);
+            --radius-xl: 1.5rem;
+            --radius-lg: 0.75rem;
+            --radius-full: 9999px;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: var(--body-font);
+            background-color: var(--surface);
+            color: var(--on-surface);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Elements (Boba Bubbles) */
+        .background-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 10% 20%, rgba(80, 225, 249, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(0, 105, 119, 0.08) 0%, transparent 40%);
+        }
+
+      
+
+        .top-app-bar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-ambient);
+        }
+
+        .top-bar-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo {
+            font-family: var(--headline-font);
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #006977, #004d58);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.025em;
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 1.5rem;
+            position: relative;
+        }
+
+        .glass-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-ambient);
+            width: 100%;
+            max-width: 720px;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Mascot Decoration */
+        .mascot-element {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 160px;
+            height: 160px;
+            opacity: 0.9;
+            pointer-events: none;
+            transform: rotate(15deg);
+        }
+
+        .mascot-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .modal-wrapper {
+    display: none; /* Ẩn mặc định */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Làm tối nền phía sau */
+    backdrop-filter: blur(4px); /* Làm mờ nền cho chuyên nghiệp */
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-box {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 400px;
+    animation: zoomIn 0.3s ease-out; /* Hiệu ứng hiện ra */
+}
+.btn-retry {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+.btn-retry:hover { background: #d32f2f; }
+
+/* Tạo Icon X */
+.error-icon {
+    width: 80px;
+    height: 80px;
+    border: 4px solid #f44336;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.error-icon .line {
+    position: absolute;
+    width: 40px;
+    height: 4px;
+    background: #f44336;
+    border-radius: 2px;
+}
+.error-icon .line.left { transform: rotate(45deg); }
+.error-icon .line.right { transform: rotate(-45deg); }
+.modal-box h2 {
+    color: #f44336;
+    font-family: Arial, sans-serif;
+    margin-bottom: 10px;
+}
+.modal-box p {
+    color: #666;
+    margin-bottom: 25px;
+}
+        /* Typography */
+        .header-section {
+            margin-bottom: 2.5rem;
+            max-width: 85%;
+        }
+
+        .title {
+            font-family: var(--headline-font);
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: var(--on-primary-container);
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.01em;
+        }
+
+        .subtitle {
+            color: var(--on-surface-variant);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* Form Styling */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--on-surface);
+            padding-left: 0.25rem;
+        }
+
+        input, select {
+            background-color: var(--surface-container-highest);
+            border: none;
+            border-radius: var(--radius-lg);
+            padding: 0.875rem 1rem;
+            font-family: var(--body-font);
+            font-size: 1rem;
+            color: var(--on-surface);
+            transition: all 0.3s ease;
+            outline: 2px solid transparent;
+        }
+
+        input:focus, select:focus {
+            background-color: var(--surface-container-lowest);
+            outline: 2px solid var(--primary-container);
+            box-shadow: 0 0 0 4px rgba(80, 225, 249, 0.1);
+        }
+
+        .address-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Radio/Gender Custom styling */
+        .gender-options {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.25rem;
+        }
+
+        .gender-item {
+            flex: 1;
+            position: relative;
+        }
+
+        .gender-item input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .gender-label {
+            display: block;
+            text-align: center;
+            background: var(--surface-container-highest);
+            padding: 0.75rem;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .gender-item input:checked + .gender-label {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 105, 119, 0.2);
+        }
+
+        /* Button Styling */
+        .btn-container {
+            margin-top: 3rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1.125rem;
+            border: none;
+            border-radius: var(--radius-full);
+            
+            color: white;
+            font-family: var(--headline-font);
+            font-size: 1.125rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s, opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            box-shadow: 0 8px 24px rgba(0, 105, 119, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 105, 119, 0.3);
+            opacity: 0.95;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* Footer from Shared Components logic */
+        footer {
+            padding: 3rem 2rem;
+            background-color: var(--surface-container-low);
+            margin-top: auto;
+        }
+
+        .footer-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 0.875rem;
+            color: var(--on-surface-variant);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-link {
+            text-decoration: none;
+            color: var(--on-surface-variant);
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .footer-link:hover {
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .form-grid, .address-group {
+                grid-template-columns: 1fr;
+            }
+            .form-group.full-width {
+                grid-column: span 1;
+            }
+            .glass-container {
+                padding: 2rem 1.5rem;
+            }
+            .title {
+                font-size: 1.75rem;
+            }
+            .mascot-element {
+                width: 100px;
+                height: 100px;
+                top: -10px;
+                right: -10px;
+            }
+            .footer-links {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+        }
+        .avatar-upload {
+    position: relative;
+    max-width: 150px;
+    margin: 20px auto;
+}
+#imageUpload1 {
+    display: none;
+}
+.avatar-preview {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    border-radius: 100%; /* Làm ảnh tròn */
+    overflow: hidden;
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-edit {
+    position: absolute;
+    right: 40px;
+    bottom: 10px;
+    z-index: 1;
+}
+
+/* Ẩn input chọn file thực tế */
+#imageUpload {
+    display: none;
+}
+
+/* Nút camera màu xanh */
+.avatar-edit label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: #006977; /* Đổi sang màu primary của bạn cho đồng bộ */
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+    </style>
+</head>
+<body>
+<!-- Background Decorative Bubbles -->
+
+<main>
+<div class="glass-container">
+<!-- Mascot Decoration -->
+<div class="mascot-element">
+<img alt="Bingchun mascot boba character" class="mascot-img" data-alt="A cute friendly boba tea mascot character smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8Mng_BICdb3v09DawTA99jGZwFgM7r1qyH_SwuZiwFzmQYnJPhc0hRfeg1kft3n9nQtXV14lmQ3Iz3c7VuJJ9gpPWdKhV4uwQ1fXv5S67riZyV7FvPCVB-ivr_jxZMELhxx_vbs3fBe6s74CjsKgnaKVfkhZ1j427GlF_rpifZ5R8jTR9oAev-nntSoHJai4bCpwXzWYmtd1lX5H-Y8rbJNYsunUIzh4U1ZGcoe6-nRRM8wiceK1f4pvmTKXXqTWQxYO2x1VI0Ql8"/>
+</div>
+<div class="header-section">
+<h1 class="title">Cập nhật thông tin bắt buộc</h1>
+<p class="subtitle">Vui lòng hoàn thiện hồ sơ của bạn để tiếp tục trải nghiệm dịch vụ của Bingchun.</p>
+</div>
+<form id="updateProfileForm" novalidate>
+<div class="form-grid">
+    <div class="avatar-upload">
+        <div class="avatar-edit">
+            <input type='file' id="imageUpload1" accept=".png, .jpg, .jpeg" />
+            <label for="imageUpload1">
+                <i class="fa-solid fa-camera"></i> </label>
+        </div>
+        <div class="avatar-preview" style="border:1px solid white">
+            <img id="imagePreview1" alt="Avatar" style="width:80px;height: auto">
+        </div>
+    </div>
+<div class="form-group full-width">
+</div>
+<div class="form-group">
+<label for="phone">Số điện thoại</label>
+<input id="phone" placeholder="0xxx xxx xxx" required="" type="tel"/>
+</div>
+
+<div class="form-group">
+<label for="dob">Email</label>
+<input id="email" required="" disabled style="background-color: rgba(117, 117, 117, 0.297);">
+</div>
+<div class="form-group">
+    <label for="dob">Ngày sinh</label>
+    <input id="dob" required="" type="date"/>
+    </div>
+<div class="form-group">
+<label>Giới tính</label>
+<div class="gender-options">
+<div class="gender-item">
+<input checked="" id="male" name="gender" type="radio" value="nam"/>
+<label class="gender-label" for="male">Nam</label>
+</div>
+<div class="gender-item">
+<input id="female" name="gender" type="radio" value="nu"/>
+<label class="gender-label" for="female">Nữ</label>
+</div>
+<div class="gender-item">
+<input id="other" name="gender" type="radio" value="khac"/>
+<label class="gender-label" for="other">Khác</label>
+</div>
+</div>
+</div>
+<div class="form-group full-width" style="margin-top: 1rem;">
+    <label>Địa chỉ giao hàng</label>
+    <input id="address" placeholder="Số nhà, tên đường..." 
+           style="margin-bottom: 0.5rem;" type="text"/>
+    
+    <button type="button" onclick="getLocation()" style="background-color: #ec884a81;padding:15px;width:250px;border-radius: 20px;margin:auto;border:1px solid rgba(163, 198, 175, 0.642)">Lấy vị trí hiện tại</button>
+<!-- <div class="address-group">
+<select required="">
+<option disabled="" selected="" value="">Tỉnh / Thành phố</option>
+<option>Hà Nội</option>
+<option>TP. Hồ Chí Minh</option>
+<option>Đà Nẵng</option>
+</select>
+<select required="">
+<option disabled="" selected="" value="">Quận / Huyện</option>
+</select>
+<select required="">
+<option disabled="" selected="" value="">Phường / Xã</option>
+</select>
+</div>
+</div>
+</div> -->
+<div class="btn-container">
+<button class="btn-primary" type="submit" style="background-color: #e18a4c;">
+                        Hoàn tất cập nhật
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+</form>
+
+</main>
+<div id="errorModal" class="modal-wrapper">
+    <div class="modal-box">
+        <div class="error-icon">
+            <div class="line left"></div>
+            <div class="line right"></div>
+        </div>
+        
+        <h2>Đăng nhập thất bại!</h2>
+        <p id="message"></p>
+        
+        <button onclick="closeErrorModal()" class="btn-retry">Thử lại</button>
+    </div>
+  </div>
+<script src="../JS/index.js"></script>
+</body></html>

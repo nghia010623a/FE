@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bingchun - Tài khoản cá nhân</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+        :root {
+            --primary: #5abce3;
+            --primary-light: #50e1f9;
+            --surface: #bddcf1e1;
+            --surface-variant: #d9e4ec;
+            --on-surface: #2a343a;
+            --on-surface-variant: #566167;
+            --outline: #727c83;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --card-shadow: 0 20px 40px rgba(0, 105, 119, 0.06);
+            --radius-xl: 1.5rem;
+            --radius-lg: 1rem;
+            --radius-full: 9999px;
+            --font-headline: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'Be Vietnam Pro', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--surface);
+            color: var(--on-surface);
+            font-family: var(--font-body);
+            display: flex;
+            min-height: 100vh;
+            border-radius: 20px;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            margin-left:8px;
+           margin-top:10vh;
+            width: 280px;
+            height: 80vh;
+            border-radius: 30px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: rgba(255, 255, 255, 0.264);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.181);
+            padding: 2.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            box-shadow: var(--card-shadow);
+        }
+
+        .sidebar-logo-container {
+            padding: 0 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .sidebar-logo {
+            height: 48px;
+            width: auto;
+            margin-bottom: 0.5rem;
+            animation: floating 2s ease-in-out infinite;
+        }
+        @keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-50px); }
+  100% { transform: translateY(0px); }
+}
+
+        .brand-name {
+            font-family: var(--font-headline);
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .brand-tagline {
+            font-size: 0.75rem;
+            color: var(--on-surface-variant);
+            letter-spacing: 0.05em;
+        }
+
+        .nav-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1.25rem;
+            text-decoration: none;
+            color: var(--on-surface-variant);
+            font-weight: 500;
+            border-radius: var(--radius-lg);
+            transition: all 0.3s ease;
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+            background: rgba(255, 255, 255, 0.6);
+            border-left: 4px solid var(--primary);
+            font-weight: 700;
+        }
+
+        .nav-link:not(.active):hover {
+            background: rgba(255, 255, 255, 0.4);
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            margin-right: 0.75rem;
+            font-size: 20px;
+        }
+
+        .user-summary-card {
+            background: #eef4fa;
+            padding: 1rem;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .user-avatar-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-full);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .user-details p:first-child {
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .user-details p:last-child {
+            font-size: 0.65rem;
+            color: var(--on-surface-variant);
+        }
+
+        /* Main Content Styles */
+        .main-wrapper {
+            margin-left: 280px;
+            width: calc(100% - 280px);
+            padding: 0 3rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        .top-header {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            background: rgba(246, 250, 254, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 90;
+        }
+
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #eef4fa;
+            border: none;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border-radius: var(--radius-full);
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--outline);
+            font-size: 20px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            width: 16px;
+            height: 16px;
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        /* Page Content */
+        .content-container {
+            padding-top: 2rem;
+            padding-bottom: 4rem;
+        }
+
+        .welcome-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .welcome-title {
+            font-family: var(--font-headline);
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.125rem;
+            color: var(--on-surface-variant);
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        .profile-main-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Common Card Styles */
+        .base-card {
+            background: rgba(249, 249, 249, 0.4);
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .card-title {
+            font-family: var(--font-headline);
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+        }
+
+        /* Form Styles */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--on-surface-variant);
+            margin-left: 0.25rem;
+        }
+
+        .form-control {
+            background: var(--surface-variant);
+            border: none;
+            padding: 1rem 1.25rem;
+            border-radius: 0.875rem;
+            font-family: var(--font-body);
+            color: var(--on-surface);
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.2s;
+        }
+
+        .form-control:focus {
+            box-shadow: inset 0 -2px 0 var(--primary);
+        }
+
+        .gender-options {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.25rem;
+        }
+
+        .btn-toggle {
+            padding: 0.75rem 2rem;
+            border-radius: var(--radius-full);
+            border: none;
+            font-family: var(--font-body);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: var(--surface-variant);
+            color: var(--on-surface-variant);
+            transition: all 0.3s;
+        }
+
+        .btn-toggle.active {
+            background: rgb(130, 198, 225);
+            color: white;
+        }
+
+        .btn-primary {
+            background: rgb(75, 190, 235);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            font-family: var(--font-body);
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 105, 119, 0.2);
+            margin-top: 1.5rem;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* Order List Styles */
+        .orders-section {
+            background: #eef4fa;
+        }
+
+        .orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+        }
+
+        .orders-header h3 {
+            margin-bottom: 0.25rem;
+        }
+
+        .view-all-link {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-decoration: none;
+        }
+
+        .order-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            transition: box-shadow 0.3s;
+        }
+
+        .order-item:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        .order-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .order-icon-box {
+            width: 64px;
+            height: 64px;
+            border-radius: 1rem;
+            background: #b3ecf3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1e5a60;
+        }
+
+        .order-icon-box.completed {
+            background: #e1e9f0;
+            color: var(--on-surface-variant);
+        }
+
+        .order-info h4 {
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .order-desc {
+            font-size: 0.75rem;
+            color: var(--on-surface-variant);
+        }
+
+        .order-status {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-top: 0.5rem;
+        }
+
+        .order-right {
+            text-align: right;
+        }
+
+        .order-price {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .order-date {
+            font-size: 0.75rem;
+            color: var(--on-surface-variant);
+        }
+
+        /* Sidebar Widgets */
+        .widget-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .password-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    position: relative;
+    overflow: hidden; /* quan trọng */
+}
+/* 
+.password-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url('../key.png') center/80px no-repeat;
+    opacity: 0.25; /* mờ */
+    /* z-index: 0; */
+/* }
+
+.password-card > * {
+    position: relative;
+    z-index: 1;
+} */
+ */
+        .google-card{
+            
+        }
+
+        .btn-outline {
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--primary);
+            background: rgb(148, 205, 218);
+            color: white;
+            font-family: var(--font-body);
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: all 0.3s;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .loyalty-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loyalty-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .loyalty-points {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .points-number {
+            font-family: var(--font-headline);
+            font-size: 3rem;
+            font-weight: 800;
+        }
+
+        .points-unit {
+            font-size: 0.875rem;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .loyalty-footer {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        .loyalty-bg-icon {
+            position: absolute;
+            bottom: -20px;
+            right: -20px;
+            font-size: 120px;
+            opacity: 0.15;
+            transform: rotate(15deg);
+        }
+
+        .promo-card {
+            height: 400px;
+            position: relative;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+        }
+
+        .promo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .promo-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-start;
+            color: white;
+        }
+
+        .promo-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 0.5rem;
+        }
+
+        .promo-title {
+            font-family: var(--font-headline);
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            font-size: 0.875rem;
+            font-family: var(--font-body);
+            cursor: pointer;
+        }
+
+        /* Footer */
+        .site-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 0;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        .google-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.644);
+    backdrop-filter: blur(20px);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.3s;
+}
+
+/* Ảnh Google */
+.google-overlay img {
+    width: 90px;
+    height:90px;
+    border-radius: 20px;
+}
+
+/* Khi bật */
+.google-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .footer-brand {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .footer-copyright {
+            color: var(--outline);
+            font-size: 0.75rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .footer-links a {
+            text-decoration: none;
+            color: var(--outline);
+            font-size: 0.75rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+        .avatar-upload {
+    position: relative;
+    max-width: 150px;
+    margin: 20px auto;
+}
+
+
+.avatar-preview {
+    width: 100px;
+    height: 100px;
+    position: relative;
+    border-radius: 100%; /* Làm ảnh tròn */
+    overflow: hidden;
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-edit {
+    position: absolute;
+    right: 40px;
+    bottom: 10px;
+    z-index: 1;
+}
+
+/* Ẩn input chọn file thực tế */
+#imageUpload {
+    display: none;
+}
+
+/* Nút camera màu xanh */
+.avatar-edit label {
+    left: -10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    background: #50b380; /* Màu xanh như hình bạn gửi */
+    border-radius: 100%;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.12);
+}
+    </style>
+</head>
+<body>
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+<div class="sidebar-logo-container">
+<img alt="Bingchun Logo" class="sidebar-logo" src="../binglogo.png" style="width:150px;height: auto;margin-left:30px;"/>
+<!-- <h1 class="brand-name">Bingchun</h1>
+<p class="brand-tagline">Premium Infusion</p> -->
+</div>
+<nav class="nav-menu">
+<div class="nav-item">
+<a class="nav-link active" href="#">
+<span class="material-symbols-outlined nav-icon">person</span>
+                    Thông tin tài khoản
+                </a>
+</div>
+<div class="nav-item">
+<a class="nav-link" href="#">
+<span class="material-symbols-outlined nav-icon">shopping_bag</span>
+                    Đơn hàng của tôi
+                </a>
+</div>
+<div class="nav-item">
+<a class="nav-link" href="#">
+<span class="material-symbols-outlined nav-icon">lock</span>
+                    Đổi mật khẩu
+                </a>
+</div>
+</nav>
+<div class="user-summary-card">
+<div class="user-avatar-circle">JD</div>
+<div class="user-details">
+<p>John Doe</p>
+<p>Thành viên Vàng</p>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="main-wrapper">
+
+<div class="content-container">
+<section class="welcome-section">
+<h2 class="welcome-title">Xin chào, John!</h2>
+<p class="welcome-subtitle">Chào mừng bạn quay trở lại với không gian trà Bingchun.</p>
+</section>
+<div class="grid-layout">
+<!-- Left Column -->
+<div class="profile-main-stack">
+<!-- Personal Info Card -->
+ 
+<div class="base-card profile-card" style="position: relative; overflow: hidden;">
+    
+<span class="material-symbols-outlined" style="position: absolute; right: 2rem; top: 2rem; font-size: 140px; opacity: 0.05;">person</span>
+<h3 class="card-title">Thông tin cá nhân</h3>
+<form>
+    <div class="avatar-upload">
+        <div class="avatar-edit">
+            <input type='file' id="imageUpload" accept=".png, .jpg, .jpeg" />
+            <label for="imageUpload">
+                <i class="fa-solid fa-camera"></i> </label>
+        </div>
+        <div class="avatar-preview" style="border:1px solid white">
+            <img id="imagePreview" alt="Avatar" style="width:80px;height: auto">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label" style="text-align: center;margin-bottom: 30px"><p style="font-size: 14px;line-height: 2.1;">Cung cấp thông tin chính xác sẽ hỗ trợ bạn trong quá trình đặt hàng, hoặc khi cần xác thực</p></label>
+
+    
+    </div>
+<div class="form-grid">
+<div class="form-group">
+<label class="form-label">Họ và tên</label>
+<input class="form-control" type="text" value="John Doe"/>
+</div>
+<div class="form-group">
+<label class="form-label">Số điện thoại</label>
+<input class="form-control" type="tel" value="090 123 4567"/>
+</div>
+<div class="form-group">
+<label class="form-label">Email</label>
+<input class="form-control" type="email" value="john.doe@example.com"/>
+</div>
+<div class="form-group">
+<label class="form-label">Ngày sinh</label>
+<input class="form-control" type="text" value="15/05/1995"/>
+</div>
+
+</div>
+<div class="form-group" style="margin-bottom: 2rem;">
+<label class="form-label">Giới tính</label>
+<div class="gender-options">
+<button class="btn-toggle active" type="button">Nam</button>
+<button class="btn-toggle" type="button">Nữ</button>
+<button class="btn-toggle" type="button">Khác</button>
+</div>
+</div>
+<button class="btn-primary" type="submit" >Lưu thay đổi</button>
+</form>
+</div>
+<!-- Recent Orders Card -->
+<div class="base-card orders-section">
+<div class="orders-header">
+<div>
+<h3 class="card-title" style="margin-bottom: 0.25rem;">Đơn hàng gần đây</h3>
+<p class="order-desc" style="font-size: 0.875rem;">Theo dõi quá trình vận chuyển trà của bạn.</p>
+</div>
+<a class="view-all-link" href="#">Xem tất cả</a>
+</div>
+<div class="order-list">
+<!-- Order 1 -->
+<div class="order-item">
+<div class="order-left">
+<div class="order-icon-box">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<div class="order-info">
+<h4>Đơn hàng #BC-8892</h4>
+<p class="order-desc">Trà Ô Long Đặc Sản, Bạch Trà Mùa Xuân</p>
+<p class="order-status">Đang giao hàng</p>
+</div>
+</div>
+<div class="order-right">
+<p class="order-price">1.250.000đ</p>
+<p class="order-date">12/10/2024</p>
+</div>
+</div>
+<!-- Order 2 -->
+<div class="order-item">
+<div class="order-left">
+<div class="order-icon-box completed">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div class="order-info">
+<h4>Đơn hàng #BC-7721</h4>
+<p class="order-desc">Bộ Ấm Chén Sứ Thanh Hoa</p>
+<p class="order-status" style="color: var(--on-surface-variant)">Đã hoàn thành</p>
+</div>
+</div>
+<div class="order-right">
+<p class="order-price">3.500.000đ</p>
+<p class="order-date">05/10/2024</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column -->
+<div class="widget-stack">
+<!-- Change Password Widget -->
+<div class="base-card password-card">
+    <div class="google-overlay" id="googleOverlay">
+        <img src="../ggLogo.webp" alt="Google">
+    </div>
+<h3 class="card-title" style="font-size: 1.25rem; margin-bottom: 1.5rem;">Đổi mật khẩu</h3>
+<form>
+<div class="form-group" style="margin-bottom: 1rem;">
+<label class="form-label" style="font-size: 10px;">Mật khẩu hiện tại</label>
+<input class="form-control" style="padding: 0.75rem; background: rgba(255,255,255,0.5);" type="password"/>
+</div>
+<div class="form-group">
+<label class="form-label" style="font-size: 10px;">Mật khẩu mới</label>
+<input class="form-control" style="padding: 0.75rem; background: rgba(255,255,255,0.5);" type="password"/>
+</div>
+<button class="btn-outline" type="submit">Cập nhật mật khẩu</button>
+</form>
+</div>
+
+<!-- Loyalty Card -->
+<div class="base-card loyalty-card">
+<span class="material-symbols-outlined loyalty-bg-icon">stars</span>
+<p class="loyalty-label">Điểm tích lũy</p>
+<div class="loyalty-points">
+<span class="points-number">1,450</span>
+<span class="points-unit">BC Points</span>
+</div>
+<div class="progress-bar-bg">
+<div class="progress-bar-fill" style="width: 65%;"></div>
+</div>
+<p class="loyalty-footer">Còn 550 điểm để lên hạng Kim Cương</p>
+</div>
+<!-- Promo Banner -->
+<div class="promo-card">
+<img alt="Premium tea leaves" class="promo-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtdLEhkKHBivxGBDGmL15V5RKiCCv58IW21L246fBJlD1Ia3tdzmz2iGRGO-fTyGUyjYet4gN_XzrTn0LAy-4y_EjQSBMc6U6oVJEsJN62sEKAEIJYxrONgkHrdesuYzpovTMqF_5YXHFEbM5YSxK_H8WJ5ae_heMdkXMbBf02rX_i4ioMno2xHuFxdUFjKLaAADCMt-0kDvIRkjheG0PxufAbrNlELOc8CtnLyiC9PbwQw04URhGRk-L4rSYEvIuwXOlZ5vy-rV-G"/>
+<div class="promo-overlay">
+<p class="promo-tag">Ưu đãi độc quyền</p>
+<h4 class="promo-title">Giảm 20% cho dòng Trà Xuân mới</h4>
+<button class="btn-white">Mua ngay</button>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</main>
+</main>
+<script src="../JS/index.js"></script>
+</body></html>
+

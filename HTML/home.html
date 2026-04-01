@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bingchun - Thưởng Thức Vị Trà Sữa Đậm Đà</title>
+<link rel="stylesheet" href="CSS/tailwind.min.css"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!--  -->
+<style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-20px) translateX(10px); }
+        }
+        .nav-glass-bg {
+    position: fixed;
+    background: transparent !important; /* Đảm bảo nav chính không có nền */
+}
+
+.nav-glass-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1; /* Đẩy lớp mờ xuống dưới cùng của nav */
+    background: rgba(255, 255, 255, 0.15); 
+    backdrop-filter: blur(12px); /* Độ mờ của thanh Nav */
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    pointer-events: none; /* Tránh việc lớp này cản trở click vào menu */
+}
+        .boba-float {
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .slide-left { transform: translateX(-50px); opacity: 0; transition: all 1s ease-out; }
+        .slide-right { transform: translateX(50px); opacity: 0; transition: all 1s ease-out; }
+        .active.slide-left, .active.slide-right { transform: translateX(0); opacity: 1; }
+        
+        .pulse-btn:hover {
+            box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7);
+            animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+        @keyframes pulse {
+            to { box-shadow: 0 0 0 20px rgba(14, 165, 233, 0); }
+        }
+        .bouncing-icon:hover {
+            animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+        /* Container chính */
+/* Container chính - bỏ overflow-hidden ở cha đi nhé */
+.dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Thanh màu xanh (Pill button) */
+.profile-trigger {
+    display: flex;
+    align-items: center;
+    background-color:#65bdf0; /* Màu xanh của Bingchun */
+    padding: 4px 12px 4px 4px; /* Trái ít hơn để avatar sát lề */
+    border-radius: 999px;
+    color: white;
+    backdrop-filter: blur(10px);
+    gap: 8px;
+    cursor: pointer;
+    border:1px solid rgba(255, 255, 255, 0.544);
+    transition: all 0.3s;
+}
+
+.profile-trigger:hover {
+    background-color: #5da3c5;
+}
+
+/* Vòng tròn avatar bên trong thanh xanh */
+.avatar-container {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgb(255, 255, 255);
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+/* Menu thả xuống */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    width: 220px;
+    background: rgba(255, 255, 255, 0.098);
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    list-style: none;
+    padding: 13px 0;
+    display: none; /* Ẩn mặc định */
+    z-index: 9999;
+    cursor:pointer;
+    -webkit-backdrop-filter: blur(4px) ;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid #eee;
+}
+
+/* Mẹo để hover không bị mất menu khi di chuyển chuột xuống */
+.dropdown-wrapper::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 15px;
+}
+
+.dropdown-wrapper:hover .dropdown-menu {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+.dropdown-menu a {
+    cursor: pointer;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Item trong menu */
+.dropdown-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    color: #444;
+    text-decoration: none;
+    gap: 12px;
+    font-size: 14px;
+    cursor: pointer !important;
+    /* transition: background 0.2s; */
+}
+
+.dropdown-menu li:hover {
+    background-color: #84b9ee;
+    cursor: pointer;
+    border-radius:20px;
+}
+
+/* .dropdown-menu li.active {
+    background-color: #ee1515;
+    font-weight: 600;
+} */
+
+.dropdown-menu hr {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+    
+}
+    </style>
+</head>
+<body class="bg-sky-200/60 dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 selection:bg-primary selection:text-white overflow-x-hidden">
+<!-- Floating Background Elements -->
+
+    <!-- </header> -->
+<!-- Hero Section -->
+ <div id="contentMain">
+<section class="max-w-7xl mx-auto px-6 py-12 md:py-24 grid md:grid-cols-2 gap-12 items-center overflow-hidden">
+    <div class=" mt-250 reveal slide-left">
+<span class="inline-block px-4 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs uppercase tracking-widest mb-6">Mới nhất tại Việt Nam</span>
+<h1 class="text-5xl md:text-7xl font-black text-slate-900 dark:text-white leading-[1.1] mb-6">
+                    Đánh Thức <span class="text-primary italic">Vị Giác</span> Cùng Bingchun
+                </h1>
+<p class="text-lg text-slate-600 dark:text-slate-300 mb-10 max-w-lg leading-relaxed">
+                    Trải nghiệm hương vị trà sữa tinh tế từ Đài Loan với lớp kem béo ngậy và trân châu thủ công dai giòn sần sật.
+                </p>
+<div class="flex flex-wrap gap-4">
+<button class="bg-primary text-white px-8 py-4 rounded-xl font-bold hover:scale-105 transition-transform flex items-center gap-2 shadow-xl shadow-primary/30">
+                        Đặt hàng ngay <span class="material-symbols-outlined">shopping_cart</span>
+</button>
+<button class="glass-card text-slate-900 dark:text-white px-8 py-4 rounded-xl font-bold hover:bg-white/60 transition-colors">
+                        Xem thực đơn
+                    </button>
+</div>
+</div>
+<div class="relative reveal slide-right flex justify-center">
+<div class="absolute inset-0 bg-primary/20 blur-[100px] rounded-full scale-75"></div>
+<img alt="Bingchun Milk Tea" class="relative z-10 w-full max-w-md rounded-3xl h-auto object-contain drop-shadow-2xl hover:rotate-3 transition-transform duration-500" data-alt="Refreshing glass of milk tea with boba" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzYEUcmeBvLJqGllsRwOpPfEzKyjJWBIfqHqn3eoGQERX-ew_Y1swRmE0Wcq24w6WaHfj3fW_9bbe4qFjl7l14O17y7zyhTRnswN4qNZ3KzymtD_XgU6gbD1mcmqTqPYngrCLcOeYpfeqx_-gcFAzfJPKAyX2VXG4RnMInqbiGjoFwoqk5jEFFbFgS8RqBZq9WEqurkJapA52zNQ0G3mI6soGejlPkV7zlRZYxdic9UnEWoviJGy2qgG8e0MCiqbsjxRfnpgL3RrE3"/>
+</div>
+</section>
+<!-- Featured Menu -->
+<section class="max-w-7xl mx-auto px-6 py-20 glass-card rounded-[3rem]">
+<div class="flex justify-between items-end mb-12 reveal">
+<div>
+<h2 class="text-3xl font-bold mb-2">Thực Đơn Nổi Bật</h2>
+<p class="text-slate-500">Những món uống được yêu thích nhất tháng này</p>
+</div>
+<button class="text-primary font-bold flex items-center gap-1 group">
+                    Xem tất cả <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- Item 1 -->
+<div class="reveal glass-card rounded-[2rem] p-4 group cursor-pointer hover:-translate-y-2 transition-transform">
+<div class="aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4 relative">
+<img alt="Classic Milk Tea" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Traditional milk tea with tapioca pearls" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtNv7vzMDN4R6tC5UeojuwgmOkzHuta7T1Czotn32n50Ip0jF5Mmu8wlogmvobXGJl1M2UDHtjWxCTazJS05XKQ1nFli4tCsg-1mUo1ZBS8fk77mw_AS9naSzo3UPnPTajNtLsp4aybrJleeh3NMCrmUGs050TNVTqJn84TQUCLjUEdE4P9AQnzEuFWmASu_uYQqmZM30_NuKJbiQgLPCfN-Fmcyg0YHzq-3smd47B3fMJ3byjehaZ4MQmZwZlKjUg5xf9wpHrFDEQ"/>
+<div class="absolute top-4 right-4 bg-white/90 px-3 py-1 rounded-full text-xs font-bold text-primary">Best Seller</div>
+</div>
+<div class="px-2 pb-2">
+<h3 class="font-bold text-lg mb-1">Trà Sữa Truyền Thống</h3>
+<p class="text-primary font-black text-xl mb-4">55.000đ</p>
+<button class="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold hover:bg-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add_shopping_cart</span> Thêm vào giỏ
+                        </button>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="reveal glass-card rounded-[2rem] p-4 group cursor-pointer hover:-translate-y-2 transition-transform" style="transition-delay: 100ms;">
+<div class="aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4">
+<img alt="Fruit Tea" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Vibrant tropical fruit tea with slices" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDsk2mFsa822Zz5pkEXDsnro6KBZ28yxui0viiDf4swqthUDfUBC--mRPHbk0fbXBDAGFW2TtDZhU3lQdCgIcD7YsLWCn28dOpw2w_NXHC_yJTVUlpwl9A4hmTtNm9xUPDIThI2su6rVTavpkaUdbR_4qgpov57FHAQzP7tjy-BWJFbQZZW2_Uu1y3TqjUnIUMZjaswf1c0-kCqvo8EorQdpeQSF891cD6xjrzo2x0HaDrz0WVPbGVeoST-Ko6Bq_X0Rp-k87_UZ0r"/>
+</div>
+<div class="px-2 pb-2">
+<h3 class="font-bold text-lg mb-1">Trà Trái Cây Nhiệt Đới</h3>
+<p class="text-primary font-black text-xl mb-4">60.000đ</p>
+<button class="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold hover:bg-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add_shopping_cart</span> Thêm vào giỏ
+                        </button>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="reveal glass-card rounded-[2rem] p-4 group cursor-pointer hover:-translate-y-2 transition-transform" style="transition-delay: 200ms;">
+<div class="aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4">
+<img alt="Brown Sugar Milk" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Brown sugar boba milk drink" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbSy4AKA7ExXzd2b5oxhymZqk_9e84TPcqAadr0mh0aYzlxXv7BjBW42dDgYU8WWhsD6vch49VtWz2f9qbyG2SFoa7aTUrQAuWU_pqlpPgdEGqBeqPBMqZywMFRIt9HymdRQnAK8U9K2vvzQyy7d_PUjV1YS3RmGRH6up237Oq2LHWUQh9aTGx_aLxKK1zstFsnR_nJOtoyNASM3JGOw2JZPrE_y3kAC4TNr5r2eSTghSTNiSioHEGZsAKz5DVQfRAZ97I-MGFHmBj"/>
+</div>
+<div class="px-2 pb-2">
+<h3 class="font-bold text-lg mb-1">Sữa Tươi Đường Đen</h3>
+<p class="text-primary font-black text-xl mb-4">65.000đ</p>
+<button class="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold hover:bg-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add_shopping_cart</span> Thêm vào giỏ
+                        </button>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="reveal glass-card rounded-[2rem] p-4 group cursor-pointer hover:-translate-y-2 transition-transform" style="transition-delay: 300ms;">
+<div class="aspect-[3/4] rounded-[1.5rem] overflow-hidden mb-4">
+<img alt="Matcha Milk Tea" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Matcha latte with foam top" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTOVMzXe0MyBOeeLmSwicheJIiNZEoBW4Aq_vFySN9jx4a0sf3YKU6bumxxMff9gBQ9Kn_UdVAx1MRSAt9M42RMm8W3K-Ida2kQdisE--zl8MiRVv_MPVyJtD9ahUCCmTCzl2r9vrjC1Rle0MyTKq5NF0GJv-Sr7BvOmkwNOpKQMqQP-8QFf62o0zYveTdUs5a36KdqB6s5S2dkPrUj2MYpD6RGQmMiryg68KqSJzrz-LZ-xqq1M7vzqZahhaLUcKPlRV8rHZqNdk8"/>
+</div>
+<div class="px-2 pb-2">
+<h3 class="font-bold text-lg mb-1">Matcha Kem Cheese</h3>
+<p class="text-primary font-black text-xl mb-4">58.000đ</p>
+<button class="w-full py-3 bg-slate-900 dark:bg-slate-700 text-white rounded-xl font-bold hover:bg-primary transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add_shopping_cart</span> Thêm vào giỏ
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Promo Section -->
+<section class="max-w-7xl mx-auto px-6 py-20">
+<div class="glass-card rounded-[3rem] p-8 md:p-16 grid md:grid-cols-2 gap-12 items-center overflow-hidden">
+<div class="reveal slide-left">
+<h2 class="text-4xl font-black mb-6">Tải App Bingchun - Nhận Ngay Voucher <span class="text-primary">50%</span></h2>
+<p class="text-slate-600 dark:text-slate-300 mb-8 text-lg">Tích điểm đổi quà, đặt hàng nhanh chóng và nhận thông báo về các chương trình khuyến mãi sớm nhất.</p>
+<div class="flex gap-4">
+<button class="bg-slate-900 dark:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-transform">
+<span class="material-symbols-outlined">ios</span> App Store
+                        </button>
+<button class="bg-slate-900 dark:bg-slate-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-transform">
+<span class="material-symbols-outlined">play_arrow</span> Google Play
+                        </button>
+</div>
+</div>
+<div class="relative flex justify-center reveal slide-right">
+<!-- Glassy Phone Mockup -->
+<div class="w-64 h-[500px] border-[8px] border-slate-900 dark:border-slate-700 rounded-[3rem] relative overflow-hidden bg-white shadow-2xl">
+<div class="absolute top-0 w-full h-6 bg-slate-900 dark:border-slate-700 flex justify-center">
+<div class="w-20 h-4 bg-slate-900 rounded-b-xl"></div>
+</div>
+<img alt="App interface" class="w-full h-full object-cover" data-alt="Mobile app showing tea menu" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCjmm4oBETXdGsc1xWqAsK3rXiIXi8o6hzof2OZO38I9Y5c1CGggs3RDRmC0Z-yGCHwLV8ShUJ7ymyAhUQgtKOt6ayqTrf4YIxbr90yYvvNLLjLI2AvQvM02fq6e5utoPFx7hlsSjNAUWmJG_H1Uf_GU6-Ylyb8CLWzYRnofz3wCQbWHzHHNCjDH9uFw1XKdgVytM2mVYdkFbTrE78eTIxFwKD037y-eENaHFlbk5kyW1yvH1t0g64fuFDBEZLGhVYJCGQxX8OPJLX"/>
+</div>
+<div class="absolute -bottom-6 -right-6 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+</div>
+</div>
+</section>
+<!-- Toppings -->
+<section class="max-w-7xl mx-auto px-6 py-20 text-center">
+<h2 class="text-3xl font-bold mb-12 reveal">Toppings Đặc Sắc</h2>
+<div class="flex flex-wrap justify-center gap-12">
+<div class="reveal group" style="transition-delay: 0ms;">
+<div class="w-24 h-24 glass-card rounded-full flex items-center justify-center mb-4 bouncing-icon">
+<span class="material-symbols-outlined text-4xl text-primary">circle</span>
+</div>
+<p class="font-bold">Trân Châu Đen</p>
+</div>
+<div class="reveal group" style="transition-delay: 100ms;">
+<div class="w-24 h-24 glass-card rounded-full flex items-center justify-center mb-4 bouncing-icon">
+<span class="material-symbols-outlined text-4xl text-primary">wb_sunny</span>
+</div>
+<p class="font-bold">Trân Châu Hoàng Kim</p>
+</div>
+<div class="reveal group" style="transition-delay: 200ms;">
+<div class="w-24 h-24 glass-card rounded-full flex items-center justify-center mb-4 bouncing-icon">
+<span class="material-symbols-outlined text-4xl text-primary">cloud</span>
+</div>
+<p class="font-bold">Kem Cheese</p>
+</div>
+<div class="reveal group" style="transition-delay: 300ms;">
+<div class="w-24 h-24 glass-card rounded-full flex items-center justify-center mb-4 bouncing-icon">
+<span class="material-symbols-outlined text-4xl text-primary">potted_plant</span>
+</div>
+<p class="font-bold">Thạch Rau Câu</p>
+</div>
+<div class="reveal group" style="transition-delay: 400ms;">
+<div class="w-24 h-24 glass-card rounded-full flex items-center justify-center mb-4 bouncing-icon">
+<span class="material-symbols-outlined text-4xl text-primary">grid_view</span>
+</div>
+<p class="font-bold">Pudding Trứng</p>
+</div>
+</div>
+</section>
+<!-- Quality Process -->
+<section class="bg-primary/5 py-24 mt-20">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center max-w-2xl mx-auto mb-16 reveal">
+<h2 class="text-4xl font-bold mb-4">Quy Trình Chất Lượng</h2>
+<p class="text-slate-600 dark:text-slate-400">Chúng tôi tỉ mỉ trong từng khâu sản xuất để mang đến ly trà sữa hoàn hảo nhất cho bạn.</p>
+</div>
+<div class="grid md:grid-cols-3 gap-8">
+<div class="reveal glass-card p-10 rounded-3xl text-center group">
+<span class="material-symbols-outlined text-6xl text-primary mb-6 inline-block group-hover:scale-110 transition-transform">eco</span>
+<h3 class="text-xl font-bold mb-4">Nguyên Liệu Sạch</h3>
+<p class="text-slate-500">Lá trà được tuyển chọn từ những đồi trà cao nguyên xanh mướt.</p>
+</div>
+<div class="reveal glass-card p-10 rounded-3xl text-center group" style="transition-delay: 100ms;">
+<span class="material-symbols-outlined text-6xl text-primary mb-6 inline-block group-hover:scale-110 transition-transform">water_drop</span>
+<h3 class="text-xl font-bold mb-4">Pha Chế Thủ Công</h3>
+<p class="text-slate-500">Mỗi ly trà đều được pha chế đúng định lượng bởi các nghệ nhân.</p>
+</div>
+<div class="reveal glass-card p-10 rounded-3xl text-center group" style="transition-delay: 200ms;">
+<span class="material-symbols-outlined text-6xl text-primary mb-6 inline-block group-hover:scale-110 transition-transform">temp_preferences_custom</span>
+<h3 class="text-xl font-bold mb-4">Ủ Trà Chuẩn Nhiệt</h3>
+<p class="text-slate-500">Nhiệt độ nước và thời gian ủ trà luôn được kiểm soát nghiêm ngặt.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Testimonials -->
+<section class="max-w-7xl mx-auto px-6 py-24">
+<h2 class="text-3xl font-bold text-center mb-16 reveal">Khách Hàng Nói Gì?</h2>
+<div class="grid md:grid-cols-3 gap-8">
+<div class="reveal glass-card p-8 rounded-3xl italic">
+<div class="flex text-primary mb-4">
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+</div>
+<p class="mb-6">"Trà sữa ở đây thực sự khác biệt, vị trà đậm đà không bị quá ngọt. Trân châu rất dai và ngon!"</p>
+<div class="flex items-center gap-3 not-italic">
+<div class="w-10 h-10 rounded-full bg-primary/20"></div>
+<div>
+<p class="font-bold">Minh Anh</p>
+<p class="text-xs text-slate-500">Sinh viên tại Hà Nội</p>
+</div>
+</div>
+</div>
+<div class="reveal glass-card p-8 rounded-3xl italic" style="transition-delay: 100ms;">
+<div class="flex text-primary mb-4">
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+</div>
+<p class="mb-6">"Menu trà trái cây rất đa dạng. Mình thích món trà nhiệt đới nhất, uống cực kì sảng khoái."</p>
+<div class="flex items-center gap-3 not-italic">
+<div class="w-10 h-10 rounded-full bg-primary/20"></div>
+<div>
+<p class="font-bold">Hoàng Nam</p>
+<p class="text-xs text-slate-500">Nhân viên văn phòng</p>
+</div>
+</div>
+</div>
+<div class="reveal glass-card p-8 rounded-3xl italic" style="transition-delay: 200ms;">
+<div class="flex text-primary mb-4">
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+<span class="material-symbols-outlined">star</span>
+</div>
+<p class="mb-6">"Ứng dụng đặt hàng rất tiện, ship nhanh và trà vẫn còn lạnh khi tới nơi. Rất hài lòng!"</p>
+<div class="flex items-center gap-3 not-italic">
+<div class="w-10 h-10 rounded-full bg-primary/20"></div>
+<div>
+<p class="font-bold">Thanh Thảo</p>
+<p class="text-xs text-slate-500">KOL</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Member Benefits -->
+<section class="max-w-7xl mx-auto px-6 py-20">
+<div class="bg-primary rounded-[3rem] p-10 md:p-20 text-white text-center relative overflow-hidden reveal">
+<div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+<div class="relative z-10">
+<h2 class="text-4xl md:text-5xl font-black mb-6">Trở Thành Thành Viên Bingchun</h2>
+<p class="text-white/80 text-xl mb-10 max-w-2xl mx-auto">Nhận ngay ưu đãi đặc quyền, quà tặng sinh nhật và voucher giảm giá mỗi tuần.</p>
+<button class="bg-white text-primary px-10 py-5 rounded-2xl font-black text-lg pulse-btn transition-all">
+                        ĐĂNG KÝ NGAY
+                    </button>
+</div>
+</div>
+</section>
+<!-- Store Locations -->
+<section class="max-w-7xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-16 items-center">
+<div class="reveal slide-left">
+<h2 class="text-3xl font-bold mb-8">Tìm Cửa Hàng Gần Bạn</h2>
+<div class="space-y-4">
+<div class="glass-card p-6 rounded-2xl flex gap-4 hover:border-primary transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-primary group-hover:scale-125 transition-transform">location_on</span>
+<div>
+<h4 class="font-bold">Chi nhánh Hoàn Kiếm</h4>
+<p class="text-slate-500 text-sm">123 Phố Huế, Hoàn Kiếm, Hà Nội</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex gap-4 hover:border-primary transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-primary group-hover:scale-125 transition-transform">location_on</span>
+<div>
+<h4 class="font-bold">Chi nhánh Quận 1</h4>
+<p class="text-slate-500 text-sm">45 Lê Lợi, Quận 1, TP.HCM</p>
+</div>
+</div>
+<div class="glass-card p-6 rounded-2xl flex gap-4 hover:border-primary transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-primary group-hover:scale-125 transition-transform">location_on</span>
+<div>
+<h4 class="font-bold">Chi nhánh Đà Nẵng</h4>
+<p class="text-slate-500 text-sm">88 Võ Nguyên Giáp, Ngũ Hành Sơn, Đà Nẵng</p>
+</div>
+</div>
+</div>
+</div>
+<div class="reveal slide-right h-[400px] rounded-3xl overflow-hidden glass-card">
+<div class="w-full h-full bg-slate-200 flex items-center justify-center relative">
+<span class="material-symbols-outlined text-6xl text-slate-400">map</span>
+<p class="absolute bottom-4 font-bold text-slate-500">Bản đồ cửa hàng Bingchun</p>
+<!-- Placeholder for Map -->
+<div class="absolute inset-0 bg-primary/5 opacity-50" data-location="Vietnam" style=""></div>
+</div>
+</div>
+</section>
+<!-- Social Media Feed -->
+<section class="py-20">
+<h2 class="text-3xl font-bold text-center mb-12 reveal">#BingchunVibes</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+<div class="reveal aspect-square overflow-hidden group">
+<img alt="IG Post" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 brightness-90 group-hover:brightness-110" data-alt="Close up boba tea texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHjfbd6eY5L008Zc_luGa8RBuabubYRQRTqNbRgRBb2w2sMawAnQV0n_BkspVPkPvnINBH0iOS5Lr2YUfrsrf8pMfXc4BBevRvQw-znE87JaqaeSahDUj32zhpiOV13OKf99yBuBnkjiqkL9xpv1OVmgMiwpOX__6-rT5UbhUFAIzJDo1IYaicKHXnhnTZLsWRhHvpFDZo7gMCw0mmMJVNtT-6N3i_rkNylOPUd2USKJf77RWvyr0u1gfdMZeCgJZ8cdoA1-HM-LyU"/>
+</div>
+<div class="reveal aspect-square overflow-hidden group" style="transition-delay: 50ms;">
+<img alt="IG Post" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 brightness-90 group-hover:brightness-110" data-alt="Customer holding milk tea" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjxBhrJo-MRepR7CbGgGHahlBYguRIYGPi9Y6W1pgXOxyeqxVKK0HcgumgJYDStzPAfYH6PMEKxOBud1ghK12myHPaVy_Pzbv-GdZJoe6K1LcYJYpBy9SToCN9kfYRq4C4gcjjz69a2gQNIgrprSGmV_0qOBMkuXCH3YYwLD-2OPy1VkXVX2j3wYvOKwNo9Ak258_W4qWhSb5BfzJldVI4zcPlpG5Y1eDzj0MB0nU7S80Fst389-DTTVDi0CC95IXUbrcoOaDY4TN4"/>
+</div>
+<div class="reveal aspect-square overflow-hidden group" style="transition-delay: 100ms;">
+<img alt="IG Post" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 brightness-90 group-hover:brightness-110" data-alt="Milk tea on a table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9IgUHL9w2A46RxcjLKsX_2u8je2pzQEMS0GMUv8XRuwZrgZYFtI0oGuSDa6g3Qgx8_iVAl6K6n0Yq1XfIPreeU1ve9n4bYAw8btiG1-9eY0mfXDBmo_1f3flxjut6OJTZyAHNjj2JXez8vlI6qDQ4XlqboTu2-xyLvH_khoxCLRENWMHNiIgO9GxGRDIl8UyyPeg_nlE_cv5nSqW_8HpygDGemOslPnbnb42sdmhzRQyUVpZTH5eeifanUrIAEHm6jFqBCD6CdCFe"/>
+</div>
+<div class="reveal aspect-square overflow-hidden group" style="transition-delay: 150ms;">
+<img alt="IG Post" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 brightness-90 group-hover:brightness-110" data-alt="Matcha tea aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6b3vkwxhC2ElZDw240beOPO13ttiBeuhNpd0ooaYQV41mD3yEONaqy32MFgm7uDrZY63ZT2gonM3SOQww6s2sX8kC-rVfKOXhpPr_hVFAm8-IFZKjbh_9021vjylj8axKvpqoBLqQ6dlGSKrR1m7niPu5lmgrTWTcLc7uxJzYKzDE7a20_GritYU_Y42nNeV6eel2RNB08rdcmOox9ncFHnek6p3Vnz7gn6rkQphYk4z9oIcp40R45P0m_mcxf2vhNIKW4er6G-2X"/>
+</div>
+<div class="reveal aspect-square overflow-hidden group" style="transition-delay: 200ms;">
+<img alt="IG Post" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 brightness-90 group-hover:brightness-110" data-alt="Iced tea with fruit" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8Awtv7WXdJr_vAdBNoa2hgWDQIW0rKUJh2bc-J0oJmuVBGN2Fr_0vrjt7NAMxMlq8sauNH3wzWBTULbW6xZSZzPza72xX9tB6mS11bwoZmNYRWNBjRCbNdE6A2doDgzf62C6E3cP09jPpGYIZFq04Vx9MP2jfywV2RIR37pWyFOasqiu6QOnY2t63raHrNmg2oemTRjPtENipxzvhrNB7o7GkPrDzGcGeJL4MYVvdX3e3STDwINWjbFh6q_8B6eRfZEdTTRIT1itp"/>
+</div>
+<div class="reveal aspect-square overflow-hidden group" style="transition-delay: 250ms;">
+<img alt="IG Post" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 brightness-90 group-hover:brightness-110" data-alt="Glass of tea with condensation" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjq4tmnoUJr3mWH1W7ZXyo_BI-jG_-gWhuLuJ2KQwTvhJ-0n4Cik3rMrAH-ujPsrNaeAL6ej7PZZRb6P-a6ecO7vmtYf3R2Hq-xnjPe4iDPBEl80hmYq6HO0VjdfwUCocy-re2AQOqpUtAYw1EPD2Tbc0aFTn8BGugbnY3rvlGrux7hj733Saf4xhMZ4nsF-NggO_-M3MdNaDXADcXiKGDzgp5_rvCeZYevHKb1pdUtphrUsl3T3NEsSVPbm61INzRdU-7MbR9EOJN"/>
+</div>
+</div>
+</section>
+ </div>
+<!-- Footer -->
+
+</div>
+<div id="errorModal" class="modal-wrapper">
+    <div class="modal-box">
+        <div class="error-icon">
+            <div class="line left"></div>
+            <div class="line right"></div>
+        </div>
+        
+        <h2>Đăng nhập thất bại!</h2>
+        <p id="message"></p>
+        
+        <button onclick="closeErrorModal()" class="btn-retry">Thử lại</button>
+    </div>
+  </div>
+<script src="JS/index.js">
+
+    </script>
+</body></html>

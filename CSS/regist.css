@@ -1,0 +1,547 @@
+:root {
+    --bingchun-light: #E0F2FE;
+    --bingchun-primary: #0EA5E9;
+    --bingchun-dark: #0369A1;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-600: #475569;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --cute-logo-color: #b3e5fc; 
+  /* Màu xanh xám đậm cho mắt/miệng để dễ nhìn (Blue Grey 600) */
+  --cute-detail-color: #546e7a;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(0deg, #f0f9ff, #e0f2fe, #bae6fd, #f0f9ff);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    color: var(--slate-800);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .signup-container {
+    width: 100%;
+    max-width: 448px;
+  }
+  .logo-icon-cute {
+    width: 48px;  /* Bạn có thể tăng giảm kích thước ở đây */
+    height: 48px;
+    display: block;
+    margin: 0 auto; /* Căn giữa logo nếu cần */
+  }
+  
+  /* Đảm bảo màu sắc được áp dụng đúng */
+  .logo-icon-cute path[fill^="#b3e"], 
+  .logo-icon-cute circle[fill^="#b3e"] {
+    fill: var(--cute-logo-color);
+  }
+  
+  .logo-icon-cute circle[fill^="#546"], 
+  .logo-icon-cute path[stroke^="#546"] {
+    fill: var(--cute-detail-color);
+    stroke: var(--cute-detail-color);
+  }
+  .brand-identity {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .logo-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background-color: white;
+    border-radius: 1rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    color: var(--bingchun-primary);
+  }
+
+  .brand-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--slate-800);
+  }
+
+  .brand-subtitle {
+    color: var(--slate-500);
+    margin-top: 0.5rem;
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.347);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    padding: 2.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--slate-700);
+    margin-left: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--slate-200);
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-size: 1rem;
+    outline: none;
+  }
+
+  .form-input:focus {
+    border-color: var(--bingchun-primary);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background-color: var(--bingchun-primary);
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    margin-top: 0.5rem;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--bingchun-dark);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .divider {
+    position: relative;
+    margin: 2rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .divider::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--slate-200);
+  }
+
+  .divider-text {
+    position: relative;
+    padding: 0 0.5rem;
+    background-color: transparent;
+    color: var(--slate-500);
+    font-size: 0.875rem;
+  }
+
+  .btn-social {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    background-color: white;
+    border: 1px solid var(--slate-200);
+    border-radius: 0.75rem;
+    color: var(--slate-700);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .btn-social:hover {
+    background-color: var(--slate-50);
+  }
+
+  .btn-social svg {
+    margin-right: 0.75rem;
+  }
+
+  .form-footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 1rem;
+    color: var(--slate-600);
+  }
+
+  .link {
+    color: var(--bingchun-primary);
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .link:hover {
+    color: var(--bingchun-dark);
+  }
+
+  .copyright {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--slate-400);
+  }
+  :root {
+  --error-red: #d93025;
+  --bg-light-red: #fff5f5;
+  --border-red: #f8d7da;
+  --text-color: #3c4043;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f0f2f5;
+}
+
+.password-validation-card {
+  background: white;
+  border: 1px solid var(--error-red);
+  border-radius: 8px;
+  padding: 20px;
+  width: 350px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  color: var(--error-red);
+}
+
+.icon-error {
+  background-color: var(--error-red);
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  margin-right: 10px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.requirements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.requirement {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  color: var(--text-color);
+  font-size: 15px;
+}
+
+.status-icon {
+  background-color: var(--error-red);
+  color: white;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+  margin-right: 12px;
+  flex-shrink: 0; /* Không cho icon bị bóp méo khi text dài */
+}
+
+/* Hiệu ứng khi hợp lệ (Optional) */
+.requirement.valid .status-icon {
+  background-color: #28a745; /* Màu xanh lá */
+  content: '✔';
+}:root {
+    --error-red: #e43a2e;
+    --bg-light-red: #fff5f5;
+    --border-red: #f8d7da;
+    --text-color: #3c4043;
+  }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f2f5;
+  }
+  
+  .password-validation-card {
+    margin-bottom: 13px;
+    background: white;
+    border: 1px solid var(--error-red);
+    border-radius: 8px;
+    padding: 20px;
+    width: 100%;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    color: var(--error-red);
+  }
+  
+  .icon-error {
+    background-color: var(--error-red);
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 12px;
+    margin-right: 10px;
+  }
+  
+  .title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .requirements-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .requirement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    color: var(--text-color);
+    font-size: 15px;
+  }
+  
+  .status-icon {
+    background-color: var(--error-red);
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    margin-right: 12px;
+    flex-shrink: 0; /* Không cho icon bị bóp méo khi text dài */
+  }
+  
+  /* Hiệu ứng khi hợp lệ (Optional) */
+  /* Khi hợp lệ: Đổi icon sang xanh lá */
+.requirement.valid .status-icon {
+    background-color: #28a745; /* Màu xanh */
+  }
+  
+  /* Khi hợp lệ: Có thể làm mờ chữ hoặc đổi màu chữ cho dễ nhìn */
+  .requirement.valid {
+    color: #28a745;
+  }
+  
+  /* Khi chưa hợp lệ: Giữ nguyên màu đỏ như code cũ của bạn */
+  .requirement.invalid .status-icon {
+    background-color: #d93025;
+  }
+  /* Hiệu ứng Checkmark */
+.success-checkmark {
+  width: 80px;
+  height: 115px;
+  margin: 0 auto;
+}
+.check-icon {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  border-radius: 50%;
+  box-sizing: content-box;
+  border: 6px solid #4CAF50;
+}
+.check-icon::after {
+  content: '';
+  position: absolute;
+  top: -4px; left: -4px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  opacity: 0;
+}
+.icon-line {
+  height: 5px;
+  background-color: #4CAF50;
+  display: block;
+  border-radius: 2px;
+  position: absolute;
+  z-index: 10;
+}
+.line-tip {
+  top: 46px; left: 14px;
+  width: 25px;
+  transform: rotate(45deg);
+  animation: icon-line-tip 0.75s;
+}
+.line-long {
+  top: 38px; right: 8px;
+  width: 47px;
+  transform: rotate(-45deg);
+  animation: icon-line-long 0.75s;
+}
+@keyframes icon-line-tip {
+  0% { width: 0; left: 1px; top: 19px; }
+  54% { width: 0; left: 1px; top: 19px; }
+  70% { width: 50px; left: -8px; top: 37px; }
+  84% { width: 17px; left: 21px; top: 48px; }
+  100% { width: 25px; left: 14px; top: 46px; }
+}
+@keyframes icon-line-long {
+  0% { width: 0; right: 46px; top: 54px; }
+  65% { width: 0; right: 46px; top: 54px; }
+  84% { width: 55px; right: 0px; top: 35px; }
+  100% { width: 47px; right: 8px; top: 38px; }
+}
+.requirement.invalid .status-icon {
+  background-color: var(--error-red);
+}
+.requirement.valid .status-icon {
+  background-color: #28a745;
+}
+.requirement.valid {
+  color: #28a745;
+}
+.modal-wrapper {
+    display: none; /* Ẩn mặc định */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Làm tối nền phía sau */
+    backdrop-filter: blur(4px); /* Làm mờ nền cho chuyên nghiệp */
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-box {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 400px;
+    animation: zoomIn 0.3s ease-out; /* Hiệu ứng hiện ra */
+}
+
+/* Tạo Icon X */
+.error-icon {
+    width: 80px;
+    height: 80px;
+    border: 4px solid #f44336;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.error-icon .line {
+    position: absolute;
+    width: 40px;
+    height: 4px;
+    background: #f44336;
+    border-radius: 2px;
+}
+.error-icon .line.left { transform: rotate(45deg); }
+.error-icon .line.right { transform: rotate(-45deg); }
+
+/* Chữ và Nút */
+.modal-box h2 {
+    color: #f44336;
+    font-family: Arial, sans-serif;
+    margin-bottom: 10px;
+}
+.modal-box p {
+    color: #666;
+    margin-bottom: 25px;
+}
+.btn-retry {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+.btn-retry:hover { background: #d32f2f; }
+
+/* Hiệu ứng hiện Modal */
+@keyframes zoomIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+/* Hiệu ứng mờ dần và thu nhỏ */
+.fade-out {
+  opacity: 0 !important;
+  transform: scale(0.9) translateY(20px) !important;
+  transition: all 0.5s ease-in-out !important;
+  pointer-events: none;
+}

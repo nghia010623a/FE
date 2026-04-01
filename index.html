@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bingchun - Thưởng Thức Vị Trà Sữa Đậm Đà</title>
+<link rel="stylesheet" href="CSS/tailwind.min.css"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!--  -->
+<style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-20px) translateX(10px); }
+        }
+        .nav-glass-bg {
+    position: fixed;
+    background: transparent !important; /* Đảm bảo nav chính không có nền */
+}
+
+.nav-glass-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1; /* Đẩy lớp mờ xuống dưới cùng của nav */
+    background: rgba(255, 255, 255, 0.15); 
+    backdrop-filter: blur(12px); /* Độ mờ của thanh Nav */
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    pointer-events: none; /* Tránh việc lớp này cản trở click vào menu */
+}
+        .boba-float {
+            animation: float 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .slide-left { transform: translateX(-50px); opacity: 0; transition: all 1s ease-out; }
+        .slide-right { transform: translateX(50px); opacity: 0; transition: all 1s ease-out; }
+        .active.slide-left, .active.slide-right { transform: translateX(0); opacity: 1; }
+        
+        .pulse-btn:hover {
+            box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7);
+            animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+        @keyframes pulse {
+            to { box-shadow: 0 0 0 20px rgba(14, 165, 233, 0); }
+        }
+        .bouncing-icon:hover {
+            animation: bounce 0.5s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+        /* Container chính */
+/* Container chính - bỏ overflow-hidden ở cha đi nhé */
+.dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Thanh màu xanh (Pill button) */
+.profile-trigger {
+    display: flex;
+    align-items: center;
+    background-color:#65bdf0; /* Màu xanh của Bingchun */
+    padding: 4px 12px 4px 4px; /* Trái ít hơn để avatar sát lề */
+    border-radius: 999px;
+    color: white;
+    backdrop-filter: blur(10px);
+    gap: 8px;
+    cursor: pointer;
+    border:1px solid rgba(255, 255, 255, 0.544);
+    transition: all 0.3s;
+}
+
+.profile-trigger:hover {
+    background-color: #5da3c5;
+}
+
+/* Vòng tròn avatar bên trong thanh xanh */
+.avatar-container {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgb(255, 255, 255);
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+/* Menu thả xuống */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    width: 220px;
+    background: rgba(255, 255, 255, 0.098);
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    list-style: none;
+    padding: 13px 0;
+    display: none; /* Ẩn mặc định */
+    z-index: 9999;
+    cursor:pointer;
+    -webkit-backdrop-filter: blur(4px) ;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid #eee;
+}
+
+/* Mẹo để hover không bị mất menu khi di chuyển chuột xuống */
+.dropdown-wrapper::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 15px;
+}
+
+.dropdown-wrapper:hover .dropdown-menu {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+.dropdown-menu a {
+    cursor: pointer;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Item trong menu */
+.dropdown-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    color: #444;
+    text-decoration: none;
+    gap: 12px;
+    font-size: 14px;
+    cursor: pointer !important;
+    /* transition: background 0.2s; */
+}
+
+.dropdown-menu li:hover {
+    background-color: #84b9ee;
+    cursor: pointer;
+    border-radius:20px;
+}
+
+/* .dropdown-menu li.active {
+    background-color: #ee1515;
+    font-weight: 600;
+} */
+
+.dropdown-menu hr {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+    
+}
+    </style>
+</head>
+<body class="bg-sky-200/60 dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 selection:bg-primary selection:text-white overflow-x-hidden">
+<!-- Floating Background Elements -->
+<div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+<div class="absolute top-20 left-10 w-12 h-12 bg-slate-800/20 rounded-full boba-float"></div>
+<div class="absolute top-1/3 right-20 w-8 h-8 bg-slate-800/20 rounded-full boba-float" style="animation-delay: 1s;"></div>
+<div class="absolute bottom-1/4 left-1/4 w-10 h-10 bg-slate-800/20 rounded-full boba-float" style="animation-delay: 2s;"></div>
+<div class="absolute top-2/3 right-1/3 w-14 h-14 bg-slate-800/20 rounded-full boba-float" style="animation-delay: 3s;"></div>
+<div class="absolute top-10 right-1/4 w-4 h-4 border-2 border-primary/30 rounded-full boba-float" style="animation-delay: 0.5s;"></div>
+</div>
+<div class="relative z-10" style="margin-top:70px">
+<!-- Top Navigation -->
+<!-- <header class="fixed top-0 w-[80%] mx-auto left-0 right-0 z-50 px-4 py-3 backdrop-blur-md rounded-full " style="background:url(sky.webp)"> -->
+    <nav class="fixed w-[80%] top-4 z-50 mx-auto left-0 right-0 rounded-full px-8 py-3 flex items-center justify-between shadow-md border-color border border-white/20  nav-glass-bg   " style="border-color: rgba(255, 255, 255, 0.447)!important">  
+          <div class="flex items-center gap-2">
+    <!-- <div class="size-8 bg-primary rounded-full flex items-center justify-center text-white">
+    <span class="material-symbols-outlined" style="">water_drop</span>
+    </div> -->
+    <h1 class="text-2xl font-black tracking-tighter text-slate-900 dark:text-white" style="">BINGCHUN</h1>
+    </div>
+    <div class="hidden md:flex items-center gap-8">
+    <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Trang chủ</a>
+    <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Thực đơn</a>
+    <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Cửa hàng</a>
+    <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Ưu đãi</a>
+    </div>
+    <div class="flex items-center gap-4">
+    <button class="p-2 hover:bg-primary/20 rounded-full transition-colors" style="">
+    <span class="material-symbols-outlined" style="">search</span>
+    </button>
+    <button class="relative p-2 hover:bg-primary/20 rounded-full transition-colors" style="">
+    <span class="material-symbols-outlined" style="">shopping_bag</span>
+    <span class="absolute top-1 right-1 size-4 bg-primary text-[10px] text-white rounded-full flex items-center justify-center font-bold" style="">2</span>
+    </button>
+    <!-- <div class="dropdown-wrapper">
+        <div class="profile-trigger">
+            <div class="avatar-container">
+                <img src="" alt="Profile" class="avatar" id="userImage">
+            </div>
+            <span class="label font-semibold">Tài khoản</span>
+            <span class="material-symbols-outlined text-sm">arrow_drop_down</span>
+        </div>
+    
+        <ul class="dropdown-menu" >
+            <li class="active"> 
+                <a href="#account-detail" onclick="navigate(event, '#account-detail')">Thông tin tài khoản</a>                  </li>
+            <li>
+                <a href="#" style="cursor: pointer;">
+                    <span class="material-symbols-outlined text-base" style="cursor: pointer;z-index: 60;">confirmation_number</span> Đơn hàng của tôi
+                </a>
+            </li>
+           
+          
+            <hr>
+            <li>
+                <a href="#" class="logout text-red-500" id="logout">
+                    <span class="material-symbols-outlined text-base">logout</span> Đăng xuất
+                </a>
+            </li>
+        </ul>
+    </div> -->
+    <div id="navbarUser"></div>
+
+    </div>
+    </nav>
+    <!-- </header> -->
+<!-- Hero Section -->
+ <div id="contentMain">
+
+<!-- Footer -->
+<footer class="pt-20 mx-auto  pb-10 px-4 bg-sky-200/40 w-[80%] rounded-[90px]">
+    <div class="max-w-7xl mx-auto glass rounded-[90px] p-12 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
+    <div class="col-span-1 md:col-span-1">
+    <div class="flex items-center gap-2 mb-6">
+    <div class="size-8 bg-primary rounded-full flex items-center justify-center text-white">
+    <span class="material-symbols-outlined" style="">water_drop</span>
+    </div>
+    <h1 class="text-2xl font-black tracking-tighter" style="">BINGCHUN</h1>
+    </div>
+    <p class="text-slate-600 dark:text-slate-400 mb-6" style="">Mang hương vị trà sữa thuần khiết nhất đến từng khách hàng. Trải nghiệm hiện đại, chất lượng truyền thống.</p>
+    <div class="flex gap-4">
+    <div class="size-10 glass-darker rounded-full flex items-center justify-center hover:bg-primary hover:text-white cursor-pointer transition-colors">
+    <span class="material-symbols-outlined" style="">social_leaderboard</span>
+    </div>
+    <div class="size-10 glass-darker rounded-full flex items-center justify-center hover:bg-primary hover:text-white cursor-pointer transition-colors">
+    <span class="material-symbols-outlined" style="">video_library</span>
+    </div>
+    <div class="size-10 glass-darker rounded-full flex items-center justify-center hover:bg-primary hover:text-white cursor-pointer transition-colors">
+    <span class="material-symbols-outlined" style="">camera</span>
+    </div>
+    </div>
+    </div>
+    <div>
+    <h5 class="font-bold text-lg mb-6" style="">Khám phá</h5>
+    <ul class="space-y-4 text-slate-600 dark:text-slate-400">
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Về Bingchun</a></li>
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Hệ thống cửa hàng</a></li>
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Tuyển dụng</a></li>
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Liên hệ nhượng quyền</a></li>
+    </ul>
+    </div>
+    <div>
+    <h5 class="font-bold text-lg mb-6" style="">Hỗ trợ</h5>
+    <ul class="space-y-4 text-slate-600 dark:text-slate-400">
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Chính sách bảo mật</a></li>
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Điều khoản dịch vụ</a></li>
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Câu hỏi thường gặp</a></li>
+    <li class="" style=""><a class="hover:text-primary transition-colors" href="#" style="">Chăm sóc khách hàng</a></li>
+    </ul>
+    </div>
+    <div>
+    <h5 class="font-bold text-lg mb-6" style="">Liên hệ</h5>
+    <div class="space-y-4 text-slate-600 dark:text-slate-400">
+    <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary" style="">call</span>
+    <span class="" style="">1900 8888</span>
+    </div>
+    <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary" style="">mail</span>
+    <span class="" style="">hello@bingchun.vn</span>
+    </div>
+    <div class="flex items-center gap-3">
+    <span class="material-symbols-outlined text-primary" style="">location_on</span>
+    <span class="" style="">123 Đường Sắc Màu, Quận 1, TP.HCM</span>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    <div class="text-center text-slate-500 text-sm" style="">
+                © 2024 Bingchun Vietnam. Tất cả quyền được bảo lưu.
+            </div>
+    </footer>
+<div id="errorModal" class="modal-wrapper">
+    <div class="modal-box">
+        <div class="error-icon">
+            <div class="line left"></div>
+            <div class="line right"></div>
+        </div>
+        
+        <h2>Đăng nhập thất bại!</h2>
+        <p id="message"></p>
+        
+        <button onclick="closeErrorModal()" class="btn-retry">Thử lại</button>
+    </div>
+  </div>
+</div>
+
+<script src="JS/index.js">
+
+    </script>
+</body></html>

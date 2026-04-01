@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BingChun - Create Account</title>
+<link rel="stylesheet" href="../CSS/regist.css">
+<!-- Tailwind CSS v3 with plugins -->
+<!-- Custom configuration for soft light blue primary color -->
+<style>
+   
+  </style>
+</head>
+<body class="">
+<!-- BEGIN: SignupContainer -->
+<main class="signup-container" data-purpose="signup-form-container">
+<!-- BEGIN: BrandLogo -->
+<header class="brand-identity" data-purpose="brand-identity">
+<!-- Logo placeholder representing 'Bingchun' iconography -->
+<!-- <svg class="logo-icon-cute" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15,65 C15,45 30,30 50,30 C70,30 85,45 85,65 L85,85 L15,85 Z" fill="#b3e5fc"/>
+    <circle cx="50" cy="30" r="15" fill="#b3e5fc"/>
+    <circle cx="45" cy="28" r="2" fill="#546e7a"/>
+    <circle cx="55" cy="28" r="2" fill="#546e7a"/>
+    <path d="M47,35 Q50,38 53,35" stroke="#546e7a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </svg> -->
+<h1 class="brand-title">BingChun</h1>
+<p class="brand-subtitle">Tạo tài khoản của bạn để bắt đầu</p>
+</header>
+<!-- END: BrandLogo -->
+<!-- BEGIN: SignupCard -->
+<div class="glass-card">
+<!-- BEGIN: RegistrationForm -->
+<form class="" id="signup-form" novalidate >
+<!-- Full Name Input -->
+<div class="form-group">
+<label class="form-label" for="username">Tên đăng nhập</label>
+<input class="form-input" id="username" name="username" placeholder="John Doe" required="" type="text"/>
+</div>
+<!-- Email Input -->
+<div class="form-group">
+<label class="form-label" for="email">Địa chỉ Email</label>
+<input class="form-input" id="email" name="email" placeholder="name@example.com" required="" type="email"/>
+</div>
+<!-- Password Input -->
+<div class="form-group">
+<label class="form-label" for="password">Mật khẩu</label>
+<input class="form-input" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+</div>
+<!-- Confirm Password Input -->
+<div class="form-group">
+<label class="form-label" for="confirm-password">Xác nhận mật khẩu</label>
+<input class="form-input" id="confirm-password" name="confirm-password" placeholder="••••••••" required="" type="password"/>
+</div>
+<div class="password-validation-card">
+<ul class="requirements-list">
+    <li id="rule-length" class="requirement invalid">
+      <span class="status-icon">✖</span> Từ 8 - 32 ký tự
+    </li>
+    <li id="rule-lower-num" class="requirement invalid">
+      <span class="status-icon">✖</span> Bao gồm chữ thường và số
+    </li>
+    <li id="rule-special" class="requirement invalid">
+      <span class="status-icon">✖</span> Bao gồm ký tự đặc biệt (!,$,@,%,...)
+    </li>
+    <li id="rule-upper" class="requirement invalid">
+      <span class="status-icon">✖</span> Có ít nhất 1 ký tự in hoa
+    </li>
+  </ul>
+</div>
+
+<!-- Submit Button -->
+<button type="submit" class="btn-primary" id="regist">Tạo tài khoản</button>
+</form>
+<!-- END: RegistrationForm -->
+<!-- BEGIN: SocialSignupDivider -->
+<div class="divider"><span class="divider-text">Hoặc đăng ký bằng</span></div>
+<!-- END: SocialSignupDivider -->
+<!-- BEGIN: SocialActions -->
+<div class="social-actions">
+<button class="btn-social" data-purpose="google-signup-button" type="button">
+<svg style="width: 20px; height: 20px; margin-right: 12px;" viewbox="0 0 24 24">
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+          Google
+        </button>
+</div>
+<!-- END: SocialActions -->
+<!-- BEGIN: FooterLinks -->
+<footer class="form-footer" data-purpose="form-footer" >
+  <main id="main-card" class="glass-card animate-pop-in" style="padding: 20px;background-color: rgba(81, 177, 229, 0.334);">
+    <p class="login-footer">
+      Đã có tài khoản? 
+      <a id="login-link" class="link" href="login.html">Quay lại Đăng nhập</a>
+    </p>
+  </main></footer>
+<!-- END: FooterLinks -->
+</div>
+<!-- END: SignupCard -->
+<!-- Optional copyright or legal links -->
+<div id="successModal" style="
+    display:none; 
+    position:fixed; 
+    top:0; left:0; 
+    width:100%; height:100%; 
+    background:rgba(255,255,255,0.95); 
+    z-index:1000; 
+    flex-direction:column; 
+    align-items:center; 
+    justify-content:center;">
+    
+    <div class="success-checkmark">
+        <div class="check-icon">
+            <span class="icon-line line-tip"></span>
+            <span class="icon-line line-long"></span>
+            <div class="icon-circle"></div>
+            <div class="icon-fix"></div>
+        </div>
+    </div>
+    
+    <h2 style="color: #4CAF50; margin-top: 20px; font-family: Arial, sans-serif;bottom:20px">Đăng ký thành công!</h2>
+    <p id="redirectText">Đang quay lại trang đăng nhập trong 5 giây...</p>
+</div>
+<div id="errorModal" class="modal-wrapper">
+  <div class="modal-box">
+      <div class="error-icon">
+          <div class="line left"></div>
+          <div class="line right"></div>
+      </div>
+      
+      <h2>Đăng ký thất bại!</h2>
+      <p id="message"></p>
+      
+      <button onclick="closeErrorModal()" class="btn-retry">Thử lại</button>
+  </div>
+</div>
+</main>
+<script src="../JS/regist.js"></script>
+<!-- END: SignupContainer -->
+</body></html>
