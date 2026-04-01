@@ -43,7 +43,7 @@ async function checkLogin()
             localStorage.setItem("isUpdateProfile", data.isUpdateProfile);
             localStorage.setItem("email", data.email);
 
-                    // window.location.href="loadingscreen.html";
+                    window.location.href="loadingscreen.html";
 
 
 
