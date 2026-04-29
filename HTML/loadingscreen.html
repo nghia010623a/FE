@@ -264,10 +264,56 @@
       // Potential adjustment to crop the "BING CHUN" text part 
       // if the provided image is a full logo sheet.
       // Based on dimensions 1167x949, the mascot is roughly the top 70%.
+      console.log("--- BẮT ĐẦU XỬ LÝ PARAM ---");
+
+// 1. Lấy URL hiện tại
+const params = new URLSearchParams(window.location.search);
+
+// 2. Trích xuất từng giá trị (phải khớp 100% chữ hoa chữ thường với URL)
+const email = params.get('email');
+const isUpdateProfile = params.get('isUpdateProfile');
+const userImage = params.get('userImage');
+const loginWithGoogle = params.get('loginWithGoogle');
+// Giả sử bạn muốn lấy tên từ email nếu không truyền username
+const usernameFromEmail = email ? email.split('@')[0] : "User";
+
+// 3. Kiểm tra xem có lấy được email không
+if (email) {
+    console.log("Tìm thấy email:", email);
+
+    // 4. Lưu vào LocalStorage
+    localStorage.setItem("email", email);
+    localStorage.setItem("isUpdateProfile", isUpdateProfile);
+    localStorage.setItem("loginWithGoogle", loginWithGoogle);
+    
+    // Lưu cục currentUser
+    const currentUser = {
+        username: usernameFromEmail,
+        image: userImage
+    };
+    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+
+    console.log("✅ Đã lưu LocalStorage thành công!");
+
+    // 5. Xóa query string trên thanh địa chỉ (để nhìn cho sạch)
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    // 6. Chuyển hướng sau 2 giây để bạn kịp nhìn Console log
+    setTimeout(() => {
+        console.log("Đang chuyển về trang chủ...");
+        window.location.href = "../index.html"; 
+    }, 2000);
+
+} else {
+    console.error("❌ Không tìm thấy tham số nào trong URL!");
+    // Thử log ra toàn bộ URL để debug
+    console.log("URL hiện tại là:", window.location.href);
+}
       img.style.objectPosition = 'top center';
       img.style.height = '140%'; // zoom in slightly to hide text footer
       img.parentElement.style.overflow = 'hidden';
     };
   </script>
+
 <!-- END: Dynamic Interactivity -->
 </body></html>

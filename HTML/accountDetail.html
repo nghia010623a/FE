@@ -502,7 +502,7 @@
             padding: 0.875rem;
             border-radius: 0.75rem;
             border: 1px solid var(--primary);
-            background: rgb(148, 205, 218);
+            background: rgb(54, 188, 218);
             color: white;
             font-family: var(--font-body);
             font-weight: 700;
@@ -782,7 +782,7 @@
 <div class="user-summary-card">
 <div class="user-avatar-circle">JD</div>
 <div class="user-details">
-<p>John Doe</p>
+<p id="us1">John Doe</p>
 <p>Thành viên Vàng</p>
 </div>
 </div>
@@ -792,8 +792,8 @@
 
 <div class="content-container">
 <section class="welcome-section">
-<h2 class="welcome-title">Xin chào, John!</h2>
-<p class="welcome-subtitle">Chào mừng bạn quay trở lại với không gian trà Bingchun.</p>
+    <h2 class="welcome-title">Xin chào, <span id="welcomeName"></span>!</h2>
+    <p class="welcome-subtitle">Chào mừng bạn quay trở lại với không gian trà Bingchun.</p>
 </section>
 <div class="grid-layout">
 <!-- Left Column -->
@@ -822,20 +822,20 @@
     </div>
 <div class="form-grid">
 <div class="form-group">
-<label class="form-label">Họ và tên</label>
-<input class="form-control" type="text" value="John Doe"/>
+<label class="form-label">Username</label>
+<input id="username" class="form-control" type="text"/>
 </div>
 <div class="form-group">
 <label class="form-label">Số điện thoại</label>
-<input class="form-control" type="tel" value="090 123 4567"/>
+<input id="phone" class="form-control" type="tel"/>
 </div>
 <div class="form-group">
 <label class="form-label">Email</label>
-<input class="form-control" type="email" value="john.doe@example.com"/>
+<input id="email" class="form-control" type="email"/>
 </div>
 <div class="form-group">
 <label class="form-label">Ngày sinh</label>
-<input class="form-control" type="text" value="15/05/1995"/>
+<input id="dob" class="form-control" type="text"/>
 </div>
 
 </div>
@@ -923,7 +923,7 @@
 <span class="material-symbols-outlined loyalty-bg-icon">stars</span>
 <p class="loyalty-label">Điểm tích lũy</p>
 <div class="loyalty-points">
-<span class="points-number">1,450</span>
+<span class="points-number" id="point123"></span>
 <span class="points-unit">BC Points</span>
 </div>
 <div class="progress-bar-bg">
@@ -946,6 +946,10 @@
 </div>
 </main>
 </main>
+
 <script src="../JS/index.js"></script>
+<!-- <script src="../JS/accountDetail.js"></script> -->
+
+
 </body></html>
 

@@ -1,13 +1,38 @@
 <!DOCTYPE html>
 
-<html class="light" lang="vi"><head>
+<html class="light" lang="vi">
+    <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Bingchun - Thưởng Thức Vị Trà Sữa Đậm Đà</title>
 <link rel="stylesheet" href="CSS/tailwind.min.css"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="CSS/index.css">
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <!--  -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    "surface": "#f6fafe",
+                    "primary": "#006977",
+                    "primary-fixed": "#50e1f9",
+                    "on-surface": "#2a343a",
+                    "on-surface-variant": "#566167",
+                    "surface-container-high": "#e1e9f0"
+                    // Tôi rút gọn lại cho đỡ dài, nếu bạn cần màu khác thì copy từ config cũ thêm vào nhé
+                },
+                fontFamily: {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Be Vietnam Pro"]
+                }
+            }
+        }
+    }
+</script>
 <style>
         @keyframes float {
             0%, 100% { transform: translateY(0) translateX(0); }
@@ -70,117 +95,7 @@
         }
         /* Container chính */
 /* Container chính - bỏ overflow-hidden ở cha đi nhé */
-.dropdown-wrapper {
-    position: relative;
-    display: inline-block;
-}
 
-/* Thanh màu xanh (Pill button) */
-.profile-trigger {
-    display: flex;
-    align-items: center;
-    background-color:#65bdf0; /* Màu xanh của Bingchun */
-    padding: 4px 12px 4px 4px; /* Trái ít hơn để avatar sát lề */
-    border-radius: 999px;
-    color: white;
-    backdrop-filter: blur(10px);
-    gap: 8px;
-    cursor: pointer;
-    border:1px solid rgba(255, 255, 255, 0.544);
-    transition: all 0.3s;
-}
-
-.profile-trigger:hover {
-    background-color: #5da3c5;
-}
-
-/* Vòng tròn avatar bên trong thanh xanh */
-.avatar-container {
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 1px solid rgb(255, 255, 255);
-}
-
-.avatar {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-
-/* Menu thả xuống */
-.dropdown-menu {
-    position: absolute;
-    top: calc(100% + 5px);
-    right: 0;
-    width: 220px;
-    background: rgba(255, 255, 255, 0.098);
-    border-radius: 20px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    list-style: none;
-    padding: 13px 0;
-    display: none; /* Ẩn mặc định */
-    z-index: 9999;
-    cursor:pointer;
-    -webkit-backdrop-filter: blur(4px) ;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid #eee;
-}
-
-/* Mẹo để hover không bị mất menu khi di chuyển chuột xuống */
-.dropdown-wrapper::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    height: 15px;
-}
-
-.dropdown-wrapper:hover .dropdown-menu {
-    display: block;
-    animation: fadeIn 0.2s ease-out;
-}
-.dropdown-menu a {
-    cursor: pointer;
-}
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Item trong menu */
-.dropdown-menu li a {
-    display: flex;
-    align-items: center;
-    padding: 10px 20px;
-    color: #444;
-    text-decoration: none;
-    gap: 12px;
-    font-size: 14px;
-    cursor: pointer !important;
-    /* transition: background 0.2s; */
-}
-
-.dropdown-menu li:hover {
-    background-color: #84b9ee;
-    cursor: pointer;
-    border-radius:20px;
-}
-
-/* .dropdown-menu li.active {
-    background-color: #ee1515;
-    font-weight: 600;
-} */
-
-.dropdown-menu hr {
-    border: 0;
-    border-top: 1px solid #eee;
-    margin: 5px 0;
-    
-}
     </style>
 </head>
 <body class="bg-sky-200/60 dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 selection:bg-primary selection:text-white overflow-x-hidden">
@@ -200,11 +115,11 @@
     <!-- <div class="size-8 bg-primary rounded-full flex items-center justify-center text-white">
     <span class="material-symbols-outlined" style="">water_drop</span>
     </div> -->
-    <h1 class="text-2xl font-black tracking-tighter text-slate-900 dark:text-white" style="">BINGCHUN</h1>
+    <h1 class="text-2xl font-black tracking-tighter text-slate-900 dark:text-white" style="background-color: rgba(83, 163, 234, 0.898);border-radius: 40px;padding:13px;color: rgb(255, 255, 255);">BINGCHUN</h1>
     </div>
     <div class="hidden md:flex items-center gap-8">
     <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Trang chủ</a>
-    <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Thực đơn</a>
+    <a class="text-sm font-semibold hover:text-primary transition-colors" onclick="navigate(event, '#menu')" style="cursor: pointer;" >Thực đơn</a>
     <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Cửa hàng</a>
     <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Ưu đãi</a>
     </div>
@@ -216,33 +131,7 @@
     <span class="material-symbols-outlined" style="">shopping_bag</span>
     <span class="absolute top-1 right-1 size-4 bg-primary text-[10px] text-white rounded-full flex items-center justify-center font-bold" style="">2</span>
     </button>
-    <!-- <div class="dropdown-wrapper">
-        <div class="profile-trigger">
-            <div class="avatar-container">
-                <img src="" alt="Profile" class="avatar" id="userImage">
-            </div>
-            <span class="label font-semibold">Tài khoản</span>
-            <span class="material-symbols-outlined text-sm">arrow_drop_down</span>
-        </div>
-    
-        <ul class="dropdown-menu" >
-            <li class="active"> 
-                <a href="#account-detail" onclick="navigate(event, '#account-detail')">Thông tin tài khoản</a>                  </li>
-            <li>
-                <a href="#" style="cursor: pointer;">
-                    <span class="material-symbols-outlined text-base" style="cursor: pointer;z-index: 60;">confirmation_number</span> Đơn hàng của tôi
-                </a>
-            </li>
-           
-          
-            <hr>
-            <li>
-                <a href="#" class="logout text-red-500" id="logout">
-                    <span class="material-symbols-outlined text-base">logout</span> Đăng xuất
-                </a>
-            </li>
-        </ul>
-    </div> -->
+   
     <div id="navbarUser"></div>
 
     </div>

@@ -1,0 +1,272 @@
+<!-- <!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Nhập dữ liệu</title>
+</head>
+<body>
+
+    <h2>Nhập thông tin</h2>
+
+    <label>ID:</label>
+    <input type="number" id="idInput"><br><br>
+
+
+    <label>Time</label>
+    <input type="number" id="time"><br><br>
+
+    <label>Complete Ratio (%):</label>
+    <input type="number" id="ratioInput"><br><br>
+
+    <label>All Time Learned:</label>
+    <input type="number" id="learnedInput"><br><br>
+
+    <button onclick="hienThi()" style="background-color: red;">RUN</button>
+
+    <h3>Kết quả:</h3>
+    <p id="result"></p>
+
+    <script>
+      async function hienThi() {
+    const id = Number(document.getElementById("idInput").value);
+    const minutes = Number(document.getElementById("time").value);
+
+    try {
+        for (let i = 1; i <= 90; i += 10) {
+            for (let j = 0; j <= minutes * 60; j=j+20) {
+
+                const json = {
+                    id: id,              // lấy từ input
+                    completeRatio: i,    // i chạy %
+                    allTimeLearned: j    // j chạy số học
+                };
+
+                const response = await fetch("https://apiv4-gov2.cls.vn/api/learner/update-course-content-user", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjhDNzAyQUNDOTI0NkUwRjg4RDhDNkM3RDIwNDI1NUU1IiwidHlwIjoiYXQrand0In0.eyJuYmYiOjE3NzU1MjMwODYsImV4cCI6MTc3NTY5NTg4NiwiaXNzIjoiaHR0cDovL2lkZW50aXR5LXNlcnZlci1zZXJ2aWNlLm1pY3JvY2xzLWV4dGVybmFsIiwiY2xpZW50X2lkIjoiaWRlbnRpdHlTZXJ2aWNlIiwic3ViIjoiMTIxODgiLCJhdXRoX3RpbWUiOjE3NzU1MjMwODYsImlkcCI6ImxvY2FsIiwiVXNlclR5cGVJZCI6IjciLCJSb2xlIjoiNCIsIk93bmVySWQiOiIyIiwiTWFuYWdlbWVudElkIjoiMiIsIkJyYW5jaCI6IiIsIlBvcnRhbCI6Im5pbmhiaW5oZWR1IiwiUG9ydGFsSWQiOiI2NSIsIkRvbWFpbiI6ImNscy52biIsIkxhbmd1YWdlQ29kZSI6InZpLXZuIiwiRmlyc3ROYW1lIjoiTHV54bq_biIsIkxhc3ROYW1lIjoiTmd1eeG7hW4gVGjhu4siLCJVc2VyQ29kZSI6Im5pbmhiaW5oZWR1MTQ4MjIiLCJQcml2YXRlRG9tYWluIjoiIiwiQ29udGVudExlYXJuIjoiMyIsIk15Q291cnNlIjoiMyIsIk9yZ1JvbGVzIjoiW10iLCJqdGkiOiJDRkVDMzIyNzAzOTA0RDg4NUY3OENGMUQ3NjlGNzRDMiIsImlhdCI6MTc3NTUyMzA4Niwic2NvcGUiOlsiZW1haWwiLCJvcGVuaWQiLCJvZmZsaW5lX2FjY2VzcyJdLCJhbXIiOlsicHdkIl19.O-tcswybVozTe1HRXnr01VbFR1ATFUUR3eHiEmscIm94GIrC25Q-SOZly0rE51rJveY7jVEbBtw2ocW3poMqL1mZ9oAVYAPBpYoPaVCv2M2E2VWLSzXZKUGR89yu_1jJDnuKgbMRWcTUBOUDgT3ivbVJFatzukHBI385i0lmvJbkFm8QVOI5LCLWyOB0inwFV77949XHrlg3V0r2ZynXRlHZylon1jiby5JNvOCduyo5wnNAwQPHpVNAFnnMVxMPPRgOSKogrvkO3PQVjF7YtuodqUEWSwvrDVCcuHtGe8FgRgmEVovmGoNUg_c0m8JMbUNfvvgshrzAC6Qqgfr5Xw",
+                        // "ngrok-skip-browser-warning": "69420"
+                    },
+                    body: JSON.stringify(json)
+                });
+
+                console.log("Gửi:", json);
+
+            }
+        }
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+    </script>
+
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingchun - Menu Trà Sữa Xanh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .menu-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .price-tag {
+            background: linear-gradient(135deg, #10b981, #059669);
+            backdrop-filter: blur(10px);
+        }
+        
+        .active-category {
+            background: rgba(255, 255, 255, 0.3) !important;
+            border: 1px solid rgba(255, 255, 255, 0.5) !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-emerald-400 via-teal-400 to-emerald-500 min-h-screen overflow-x-hidden">
+    <!-- Banner Hero -->
+    <div class="relative h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0">
+            <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-teal-400/30 to-emerald-600/40"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(120,119,198,0.3),transparent_50%),radial-gradient(circle_at_80%_20%,rgba(255,119,198,0.3),transparent_50%),radial-gradient(circle_at_40%_40%,rgba(120,219,255,0.3),transparent_50%)]"></div>
+        </div>
+        
+        <div class="relative z-10 text-center text-white px-6 max-w-4xl mx-auto">
+            <h1 class="text-6xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent drop-shadow-2xl">
+                BINGCHUN
+            </h1>
+            <p class="text-xl md:text-2xl font-light mb-8 opacity-90 max-w-2xl mx-auto leading-relaxed">
+                Trà sữa củ dền xanh tươi mát - Hương vị tự nhiên, ngọt lành từ thiên nhiên
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button class="glass-card px-12 py-6 rounded-3xl text-lg font-semibold text-white hover:bg-white/30 transition-all duration-300 active:scale-95 shadow-2xl">
+                    Xem Menu Ngay
+                </button>
+                <button class="glass-card px-12 py-6 rounded-3xl text-lg font-semibold border-2 border-white/30 hover:bg-white/20 transition-all duration-300">
+                    Đặt Hàng Online
+                </button>
+            </div>
+        </div>
+        
+        <!-- Floating Elements -->
+        <div class="absolute top-20 left-10 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"></div>
+        <div class="absolute bottom-20 right-20 w-48 h-48 bg-white/5 rounded-full blur-3xl animate-bounce-slow"></div>
+    </div>
+
+    <!-- Menu Section -->
+    <div class="pt-28 pb-32 max-w-7xl mx-auto px-6 relative -mt-20">
+        <div class="flex gap-4 mb-12 overflow-x-auto no-scrollbar pb-4" id="menu-buttons" 
+             style="backdrop-filter:blur(20px); position: sticky; top: 0; z-index: 999; background: rgba(255,255,255,0.1); padding: 20px 24px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+            <button data-category="all" class="category-btn px-8 py-4 rounded-3xl glass-card text-white font-semibold whitespace-nowrap flex items-center gap-3 text-sm active:scale-95 transition-all duration-300">
+                <span class="material-icons-outlined text-lg">menu</span> Tất cả
+            </button>
+            
+            <button data-category="best-seller" class="category-btn px-8 py-4 rounded-3xl glass-card text-white font-semibold whitespace-nowrap flex items-center gap-3 text-sm hover:bg-white/20 active:scale-95 transition-all duration-300 active-category">
+                <img src="https://cdn-icons-png.flaticon.com/512/2999/2999824.png" width="24" class="filter brightness-0 invert-1">
+                Best Seller
+            </button>
+            
+            <button data-category="ice-cream" class="category-btn px-8 py-4 rounded-3xl glass-card text-white font-semibold whitespace-nowrap flex items-center gap-3 text-sm hover:bg-white/20 active:scale-95 transition-all duration-300">
+                <span class="material-icons-outlined text-lg">local_cafe</span> Kem
+            </button>
+            
+            <button data-category="fruit-tea" class="category-btn px-8 py-4 rounded-3xl glass-card text-white font-semibold whitespace-nowrap flex items-center gap-3 text-sm hover:bg-white/20 active:scale-95 transition-all duration-300">
+                <span class="material-icons-outlined text-lg">local_drink</span> Trà Quả
+            </button>
+            
+            <button data-category="milk-tea" class="category-btn px-8 py-4 rounded-3xl glass-card text-white font-semibold whitespace-nowrap flex items-center gap-3 text-sm hover:bg-white/20 active:scale-95 transition-all duration-300">
+                <span class="material-icons-outlined text-lg">bubble_chart</span> Trà Sữa
+            </button>
+        </div>
+
+        <div id="render-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-opacity duration-500" style="background: rgba(255,255,255,0.08); backdrop-filter: blur(20px); border-radius: 40px; border: 1px solid rgba(255,255,255,0.15); padding: 40px; box-shadow: 0 25px 50px rgba(0,0,0,0.15);">
+            <!-- Menu items sẽ được render bằng JS -->
+        </div>
+    </div>
+
+    <script>
+        // Menu data
+        const menuData = {
+            "all": [
+                { id: 1, name: "Bingchun Xanh Đặc Biệt", price: "45.000đ", category: "best-seller", desc: "Trà xanh củ dền tươi, thạch dừa, kem cheese", image: "https://images.unsplash.com/photo-1623225866195-8b2d3d351c79?w=400&h=400&fit=crop&crop=center" },
+                { id: 2, name: "Trà Sữa Bingchun", price: "38.000đ", category: "milk-tea", desc: "Trà xanh nguyên chất + sữa tươi + củ dền", image: "https://images.unsplash.com/photo-1577968897966-7d9c7f8c7e0b?w=400&h=400&fit=crop" },
+                { id: 3, name: "Kem Bingchun Matcha", price: "42.000đ", category: "ice-cream", desc: "Kem matcha béo ngậy + sốt củ dền", image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop" },
+                { id: 4, name: "Trà Xanh Vải Bingchun", price: "40.000đ", category: "fruit-tea", desc: "Trà xanh + vải tươi + thạch củ dền", image: "https://images.unsplash.com/photo-1621947059552-252a9eed73a9?w=400&h=400&fit=crop" },
+                { id: 5, name: "Bingchun Topping Full", price: "55.000đ", category: "best-seller", desc: "Full topping: trân châu, pudding, thạch dừa", image: "https://images.unsplash.com/photo-1512568400610-42fe290ca824?w=400&h=400&fit=crop" },
+                { id: 6, name: "Matcha Cheese Bingchun", price: "48.000đ", category: "milk-tea", desc: "Matcha đậm đà + kem cheese béo ngậy", image: "https://images.unsplash.com/photo-1542994983-9de84ee6eb71?w=400&h=400&fit=crop" }
+            ],
+            "best-seller": [
+                { id: 1, name: "Bingchun Xanh Đặc Biệt", price: "45.000đ", category: "best-seller", desc: "Trà xanh củ dền tươi, thạch dừa, kem cheese", image: "https://images.unsplash.com/photo-1623225866195-8b2d3d351c79?w=400&h=400&fit=crop&crop=center" },
+                { id: 5, name: "Bingchun Topping Full", price: "55.000đ", category: "best-seller", desc: "Full topping: trân châu, pudding, thạch dừa", image: "https://images.unsplash.com/photo-1512568400610-42fe290ca824?w=400&h=400&fit=crop" }
+            ],
+            "ice-cream": [
+                { id: 3, name: "Kem Bingchun Matcha", price: "42.000đ", category: "ice-cream", desc: "Kem matcha béo ngậy + sốt củ dền", image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=400&fit=crop" }
+            ],
+            "fruit-tea": [
+                { id: 4, name: "Trà Xanh Vải Bingchun", price: "40.000đ", category: "fruit-tea", desc: "Trà xanh + vải tươi + thạch củ dền", image: "https://images.unsplash.com/photo-1621947059552-252a9eed73a9?w=400&h=400&fit=crop" }
+            ],
+            "milk-tea": [
+                { id: 2, name: "Trà Sữa Bingchun", price: "38.000đ", category: "milk-tea", desc: "Trà xanh nguyên chất + sữa tươi + củ dền", image: "https://images.unsplash.com/photo-1577968897966-7d9c7f8c7e0b?w=400&h=400&fit=crop" },
+                { id: 6, name: "Matcha Cheese Bingchun", price: "48.000đ", category: "milk-tea", desc: "Matcha đậm đà + kem cheese béo ngậy", image: "https://images.unsplash.com/photo-1542994983-9de84ee6eb71?w=400&h=400&fit=crop" }
+            ]
+        };
+
+        // Render function
+        function renderMenu(category = 'all') {
+            const container = document.getElementById('render-container');
+            const items = menuData[category] || [];
+            
+            container.innerHTML = items.map(item => `
+                <div class="menu-item group cursor-pointer rounded-3xl p-8 overflow-hidden h-[420px] flex flex-col glass-card">
+                    <div class="relative mb-6 h-48 rounded-2xl overflow-hidden">
+                        <img src="${item.image}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <div class="absolute top-4 right-4 px-3 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+                            ${item.category === 'best-seller' ? '🔥 BEST' : ''}
+                        </div>
+                    </div>
+                    <div class="flex-1 flex flex-col">
+                        <h3 class="font-bold text-xl text-white mb-2 leading-tight">${item.name}</h3>
+                        <p class="text-emerald-100 text-sm mb-4 flex-1">${item.desc}</p>
+                        <div class="price-tag px-6 py-3 rounded-2xl text-white font-bold text-lg shadow-2xl w-fit">
+                            ${item.price}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Category buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMenu('all');
+            
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const category = this.dataset.category;
+                    
+                    // Remove active class
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active-category'));
+                    // Add active class
+                    this.classList.add('active-category');
+                    
+                    // Render menu
+                    renderMenu(category);
+                });
+            });
+        });
+
+        // Smooth scroll animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes bounce-slow {
+                0%, 100% { transform: translateY(0px) rotate(0deg); }
+                50% { transform: translateY(-20px) rotate(180deg); }
+            }
+            .animate-bounce-slow { animation: bounce-slow 6s ease-in-out infinite; }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

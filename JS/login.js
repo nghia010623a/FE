@@ -9,6 +9,11 @@ function showErrorModal(text) {
     const modal = document.getElementById('errorModal');
     modal.style.display = 'none';
   }
+  document.getElementById("loginwithgoogle").addEventListener("click", function () {
+    // URL này là mặc định của Spring Security
+    window.location.href = "https://straticulate-obtusely-ernesto.ngrok-free.dev/oauth2/authorization/google?prompt=select_account";
+    });
+
 async function checkLogin()
 {
 
@@ -42,6 +47,7 @@ async function checkLogin()
             localStorage.setItem("loginWithGoogle", data.loginWithGoogle);
             localStorage.setItem("isUpdateProfile", data.isUpdateProfile);
             localStorage.setItem("email", data.email);
+            localStorage.setItem("currentUser", JSON.stringify(data.currentUser));
 
                     window.location.href="loadingscreen.html";
 

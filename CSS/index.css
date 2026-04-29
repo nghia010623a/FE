@@ -330,3 +330,133 @@ h1 {
     transition: 0.3s;
 }
 .btn-retry:hover { background: #d32f2f; }
+.dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* Thanh màu xanh (Pill button) */
+.profile-trigger {
+    display: flex;
+    align-items: center;
+    background-color:#65bdf0; /* Màu xanh của Bingchun */
+    padding: 4px 12px 4px 4px; /* Trái ít hơn để avatar sát lề */
+    border-radius: 999px;
+    color: white;
+    backdrop-filter: blur(10px);
+    gap: 8px;
+    cursor: pointer;
+    border:1px solid rgba(255, 255, 255, 0.544);
+    transition: all 0.3s;
+}
+
+.profile-trigger:hover {
+    background-color: #5da3c5;
+}
+
+/* Vòng tròn avatar bên trong thanh xanh */
+.avatar-container {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgb(255, 255, 255);
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+/* Menu thả xuống */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    width: 220px;
+    background: rgba(255, 255, 255, 0.098);
+    border-radius: 20px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    list-style: none;
+    padding: 13px 0;
+    display: none; /* Ẩn mặc định */
+    z-index: 9999;
+    cursor:pointer;
+    -webkit-backdrop-filter: blur(4px) ;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid #eee;
+}
+
+/* Mẹo để hover không bị mất menu khi di chuyển chuột xuống */
+.dropdown-wrapper::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 15px;
+}
+
+.dropdown-wrapper:hover .dropdown-menu {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+.dropdown-menu a {
+    cursor: pointer;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Item trong menu */
+.dropdown-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    color: #444;
+    text-decoration: none;
+    gap: 12px;
+    font-size: 14px;
+    cursor: pointer !important;
+    /* transition: background 0.2s; */
+}
+
+.dropdown-menu li:hover {
+    background-color: #84b9ee;
+    cursor: pointer;
+    border-radius:20px;
+}
+
+/* .dropdown-menu li.active {
+    background-color: #ee1515;
+    font-weight: 600;
+} */
+
+.dropdown-menu hr {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+    
+}
+/* Thêm vào cuối file CSS/index.css của bạn */
+.glass-card {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.primary-gradient-btn {
+    background: linear-gradient(135deg, #006977 0%, #50e1f9 100%);
+    box-shadow: 0 4px 15px rgba(0, 105, 119, 0.2);
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.asymmetric-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+}
