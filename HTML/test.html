@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bingchun – Best Seller</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(135deg, #1a0533 0%, #0d1b3e 40%, #0a2a1f 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .bg-orbs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.35;
+  }
+  .orb1 { width: 500px; height: 500px; background: #7c3aed; top: -100px; left: -100px; }
+  .orb2 { width: 400px; height: 400px; background: #0ea5e9; top: 200px; right: -80px; }
+  .orb3 { width: 350px; height: 350px; background: #10b981; bottom: 0; left: 30%; }
+  .orb4 { width: 250px; height: 250px; background: #f59e0b; bottom: 100px; right: 20%; }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 60px 40px 40px;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border-radius: 50px;
+    margin-bottom: 24px;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: #f59e0b;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(1.5); }
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+  h1 em { font-style: italic; color: #f59e0b; }
+  .subtitle {
+    font-size: 16px;
+    color: rgba(255,255,255,0.55);
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  /* FILTER BAR */
+  .filter-bar {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 40px 40px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 22px;
+    border-radius: 50px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: rgba(255,255,255,0.65);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .filter-btn:hover {
+    background: rgba(255,255,255,0.14);
+    color: #fff;
+    border-color: rgba(255,255,255,0.3);
+    transform: translateY(-1px);
+  }
+  .filter-btn.active {
+    background: rgba(245,158,11,0.25);
+    border-color: rgba(245,158,11,0.6);
+    color: #fcd34d;
+  }
+  .filter-icon { font-size: 15px; }
+
+  /* GRID */
+  .grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 20px;
+    padding: 0 40px 60px;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+
+  /* CARD */
+  .card {
+    position: relative;
+    border-radius: 24px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: fadeUp 0.5s ease both;
+  }
+  .card:hover { transform: translateY(-8px) scale(1.01); }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.10s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+  .card:nth-child(4) { animation-delay: 0.20s; }
+  .card:nth-child(5) { animation-delay: 0.25s; }
+  .card:nth-child(6) { animation-delay: 0.30s; }
+
+  .card-glass {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 24px;
+  }
+  .card-featured .card-glass {
+    background: rgba(245,158,11,0.1);
+    border-color: rgba(245,158,11,0.3);
+  }
+
+  .card-content {
+    position: relative;
+    z-index: 1;
+    padding: 28px 24px 24px;
+  }
+
+  /* RANK TAGS */
+  .rank-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 50px;
+    margin-bottom: 20px;
+  }
+  .rank-1 { background: rgba(245,158,11,0.2);    color: #fcd34d; border: 1px solid rgba(245,158,11,0.4); }
+  .rank-2 { background: rgba(161,161,170,0.15);  color: #d4d4d8; border: 1px solid rgba(161,161,170,0.3); }
+  .rank-3 { background: rgba(180,83,9,0.15);     color: #fb923c; border: 1px solid rgba(180,83,9,0.3); }
+  .rank-n { background: rgba(255,255,255,0.08);  color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.12); }
+
+  /* EMOJI */
+  .drink-emoji {
+    font-size: 64px;
+    display: block;
+    text-align: center;
+    margin: 8px 0 16px;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
+    transition: transform 0.3s ease;
+  }
+  .card:hover .drink-emoji { transform: scale(1.1) rotate(-5deg); }
+
+  /* TEXT */
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .card-cat {
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .card-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.08);
+    margin-bottom: 16px;
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .price {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .price span { font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.45); }
+  .card-stars {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #fcd34d;
+  }
+  .card-stars em { color: rgba(255,255,255,0.5); font-style: normal; margin-left: 2px; }
+
+  /* TAGS */
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .tag {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 50px;
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  /* ADD BUTTON */
+  .btn-add {
+    margin-top: 16px;
+    width: 100%;
+    padding: 11px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+  }
+  .btn-add:hover {
+    background: rgba(245,158,11,0.25);
+    border-color: rgba(245,158,11,0.5);
+    color: #fcd34d;
+  }
+  .card-featured .btn-add {
+    background: rgba(245,158,11,0.2);
+    border-color: rgba(245,158,11,0.4);
+    color: #fcd34d;
+  }
+  .card-featured .btn-add:hover {
+    background: rgba(245,158,11,0.4);
+  }
+  .btn-add.added {
+    background: rgba(16,185,129,0.25) !important;
+    border-color: rgba(16,185,129,0.5) !important;
+    color: #6ee7b7 !important;
+  }
+
+  /* FOOTER */
+  .section-label {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding-bottom: 40px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .hero { padding: 40px 20px 28px; }
+    .filter-bar { padding: 0 20px 28px; gap: 8px; }
+    .grid { padding: 0 20px 48px; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background orbs -->
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="orb orb4"></div>
+</div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge"><span class="badge-dot"></span> Bingchun &nbsp;·&nbsp; Best Seller</div>
+  <h1>Đồ uống <em>bán chạy</em><br>nhất tháng này</h1>
+  <p class="subtitle">Được yêu thích nhất — được chọn nhiều nhất</p>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar" id="filterBar">
+  <button class="filter-btn active" data-cat="all"><span class="filter-icon">✦</span> Tất cả</button>
+  <button class="filter-btn" data-cat="trà sữa"><span class="filter-icon">🧋</span> Trà sữa</button>
+  <button class="filter-btn" data-cat="trà hoa quả"><span class="filter-icon">🍓</span> Trà hoa quả</button>
+  <button class="filter-btn" data-cat="kem"><span class="filter-icon">🍦</span> Kem</button>
+  <button class="filter-btn" data-cat="sáng tạo"><span class="filter-icon">✨</span> Sáng tạo</button>
+</div>
+
+<!-- Product grid -->
+<div class="grid" id="productGrid"></div>
+
+<div class="section-label">— Bingchun · Hương vị đáng nhớ —</div>
+
+<script>
+  const products = [
+    { id:1, name:"Trà Sữa Trân Châu Đen", cat:"trà sữa",    emoji:"🧋", price:"45.000", rank:1, stars:"4.9", reviews:"2.1k", tags:["Bán chạy #1","Signature"] },
+    { id:2, name:"Trà Dâu Tây Hoa Quả",   cat:"trà hoa quả",emoji:"🍓", price:"42.000", rank:2, stars:"4.8", reviews:"1.7k", tags:["Mới","Tươi mát"] },
+    { id:3, name:"Kem Matcha Vân Mây",     cat:"kem",        emoji:"🍦", price:"38.000", rank:3, stars:"4.8", reviews:"985",  tags:["Viral","Độc quyền"] },
+    { id:4, name:"Trà Sữa Taro Tím",       cat:"trà sữa",    emoji:"💜", price:"46.000", rank:4, stars:"4.7", reviews:"870",  tags:["Taro","Creamy"] },
+    { id:5, name:"Thanh Long Passion",      cat:"trà hoa quả",emoji:"🐉", price:"44.000", rank:5, stars:"4.7", reviews:"740",  tags:["Tropical","Đặc biệt"] },
+    { id:6, name:"Latte Muối Caramel",      cat:"sáng tạo",  emoji:"🌊", price:"50.000", rank:6, stars:"4.9", reviews:"1.2k", tags:["Sáng tạo","Hot trend"] },
+    { id:7, name:"Kem Phô Mai Soft Serve",  cat:"kem",        emoji:"🧁", price:"40.000", rank:7, stars:"4.6", reviews:"630",  tags:["Phô mai","Béo ngậy"] },
+    { id:8, name:"Trà Vải Lychee Mint",     cat:"trà hoa quả",emoji:"🫐", price:"43.000", rank:8, stars:"4.6", reviews:"510",  tags:["Vải","Bạc hà"] },
+    { id:9, name:"Brown Sugar Milk Storm",  cat:"sáng tạo",  emoji:"🌪️", price:"52.000", rank:9, stars:"4.9", reviews:"1.8k", tags:["Viral","Đường đen"] },
+  ];
+
+  function rankClass(r) {
+    if (r === 1) return 'rank-1';
+    if (r === 2) return 'rank-2';
+    if (r === 3) return 'rank-3';
+    return 'rank-n';
+  }
+  function rankLabel(r) {
+    if (r === 1) return '★ #1 Best Seller';
+    if (r === 2) return '★ #2 Top Pick';
+    if (r === 3) return '★ #3 Yêu thích';
+    return `# ${r}`;
+  }
+
+  function renderCards(cat) {
+    const grid = document.getElementById('productGrid');
+    const filtered = cat === 'all' ? products : products.filter(p => p.cat === cat);
+    grid.innerHTML = filtered.map((p, i) => `
+      <div class="card ${p.rank === 1 ? 'card-featured' : ''}" style="animation-delay:${i * 0.06}s">
+        <div class="card-glass"></div>
+        <div class="card-content">
+          <div class="rank-tag ${rankClass(p.rank)}">${rankLabel(p.rank)}</div>
+          <span class="drink-emoji">${p.emoji}</span>
+          <p class="card-name">${p.name}</p>
+          <p class="card-cat">${p.cat}</p>
+          <div class="tag-row">${p.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+          <div class="card-divider"></div>
+          <div class="card-footer">
+            <div class="price">${p.price} <span>đ</span></div>
+            <div class="card-stars">★★★★★ <em>${p.stars} (${p.reviews})</em></div>
+          </div>
+          <button class="btn-add" onclick="addToCart(this, '${p.name}')">+ Thêm vào giỏ</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('filterBar').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCards(btn.dataset.cat);
+  });
+
+  function addToCart(btn, name) {
+    btn.textContent = '✓ Đã thêm!';
+    btn.classList.add('added');
+    setTimeout(() => {
+      btn.textContent = '+ Thêm vào giỏ';
+      btn.classList.remove('added');
+    }, 1800);
+  }
+
+  renderCards('all');
+</script>
+</body>
+</html>
