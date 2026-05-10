@@ -470,13 +470,30 @@ async function initDynamicMenu() {
         const fullImageUrl = `https://straticulate-obtusely-ernesto.ngrok-free.dev/${item.imageUrl}`;
         
         return `
-        <div class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-500">
-            <div class="relative w-full aspect-square rounded-3xl overflow-hidden mb-6 bg-gray-100 flex items-center justify-center">
+<div style="cursor:pointer" class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between 
+                border-2 border-transparent hover:border-blue-600 hover:shadow-2xl transition-all duration-500">        
+                
+                <div class="absolute top-2 left-2 w-16 h-16 z-20 
+                    pointer-events-none opacity-0 -translate-x-5 group-hover:opacity-100 group-hover:translate-x-0 group-hover:border-blue-600
+                    transition-all duration-500 ease-out">
+            <img 
+                src="../binglogo.png" 
+                alt="Badge" 
+                class="w-full h-full object-contain filter drop-shadow-lg"
+            >
+        </div>
+                
+                <div class="relative w-full aspect-square rounded-3xl overflow-hidden mb-6 bg-gray-100 flex items-center justify-center">
                 <img 
                     src="${fullImageUrl}" 
                     alt="${item.productName}" 
-                    class="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                    class="max-w-full max-h-full object-contain transition-transform duration-700"
                 >
+                <div class="absolute top-0 left-4 w-12 h-12 z-10 
+                        opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 
+                        transition-all duration-500 ease-out">
+               
+            </div>
             </div>
 
             <div>
@@ -484,7 +501,7 @@ async function initDynamicMenu() {
                     ${item.productName}
                 </h3>
 
-                <div class="flex items-center gap-2 mb-3">
+                <div style="cursor:pointer" class="flex items-center gap-2 mb-3">
                     ${renderStars(item.rating)} 
                     <span class="text-xs text-on-surface-variant">
                         ${(item.rating).toFixed(1)}
@@ -493,10 +510,10 @@ async function initDynamicMenu() {
 
                 <div class="flex items-center justify-between mt-2">
                     <span class="text-2xl font-black text-primary">
-                        ${item.price}
+                    ${Number(item.price).toLocaleString('en-US')}đ
                     </span>
 
-                    <button class="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
+                    <button style="background-color:rgba(111, 172, 216)" class="w-12 h-12 rounded-2xl  text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
                         <span class="material-symbols-outlined">add_shopping_cart</span>
                     </button>
                 </div>
@@ -512,7 +529,9 @@ async function initDynamicMenu() {
             if (categoryId === "all") {
                 items = viewsData;
             } else {
-                items = viewsData.filter(item => item.category === categoryId);
+                items = viewsData.filter(item => {
+                    return Number(item.category) === Number(categoryId);
+                });
             }
 
             renderContainer.innerHTML = items.length
