@@ -347,7 +347,9 @@ function handlePostLoadLogic(path) {
     }
     
     // Nếu load vào trang menu, khởi tạo logic menu động
-    if (path === "menu" || path === "home" || path === "") {
+    const renderContainer = document.getElementById("render-container");
+    if (renderContainer) {
+        console.log("Tìm thấy container, bắt đầu khởi tạo menu...");
         initDynamicMenu();
     }
 }
@@ -376,7 +378,7 @@ document.addEventListener("DOMContentLoaded", function() {
     refreshToken();
     
     // Gắn logic menu ở trang chủ/menu lần đầu
-    initDynamicMenu();
+    // initDynamicMenu();
 });
 
 window.onpopstate = function () {
@@ -385,62 +387,143 @@ window.onpopstate = function () {
 };
 
 
+//load pd
+async function loadProduct() {
+    try {
+        const response = await fetch(
+            'https://straticulate-obtusely-ernesto.ngrok-free.dev/api/users/products',
+            {
+                method: "GET",
+                headers: {
+                    "ngrok-skip-browser-warning": "true", // Bỏ qua màn hình cảnh báo
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        console.log("Dữ liệu đã nhận:", data);
+
+        return data;
+
+    } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu:', error);
+        return [];
+    }
+}
+
+
+
 // ==========================================
 // 6. LOGIC XỬ LÝ MENU ĐỘNG (SẢN PHẨM)
 // ==========================================
-function initDynamicMenu() {
+async function initDynamicMenu() {
     const renderContainer = document.getElementById("render-container");
     const categoryBtns = document.querySelectorAll(".category-btn");
 
     if (!renderContainer) return;
 
-    // Hàm tạo item cho Grid
-    const createProductCard = (item) => `
+    // 1. Load dữ liệu từ Server
+    const viewsData = await loadProduct();
+    if (!Array.isArray(viewsData)) return;
+
+    // ── 2. KHÔI PHỤC HÀM VẼ SAO (RENDER STARS) ──
+    const renderStars = (rating = 5) => {
+        const S = 14, GAP = 3, H = 16;
+        const W = 5 * S + 4 * GAP;
+        const starPath = (cx, cy, outerR, innerR, pts) => {
+            let d = [];
+            for (let i = 0; i < pts * 2; i++) {
+                const angle = (i * Math.PI / pts) - Math.PI / 2;
+                const r = i % 2 === 0 ? outerR : innerR;
+                d.push(`${(cx + Math.cos(angle) * r).toFixed(2)},${(cy + Math.sin(angle) * r).toFixed(2)}`);
+            }
+            return d.join(' ');
+        };
+
+        let defs = '', stars = '';
+        for (let i = 0; i < 5; i++) {
+            const x = i * (S + GAP) + S / 2;
+            const fill = Math.min(1, Math.max(0, rating - i));
+            const id = `sr_${i}_${Math.random().toString(36).slice(2, 6)}`;
+            defs += `
+                <linearGradient id="${id}" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="${(fill * 100).toFixed(1)}%" stop-color="#FACC15"/>
+                    <stop offset="${(fill * 100).toFixed(1)}%" stop-color="rgba(255,255,255,0.15)"/>
+                </linearGradient>`;
+            stars += `<polygon
+                points="${starPath(x, H / 2, S / 2, S / 4.5, 5)}"
+                fill="url(#${id})"
+                stroke="rgba(250,204,21,0.45)"
+                stroke-width="0.8"/>`;
+        }
+
+        return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+                    <defs>${defs}</defs>${stars}
+                </svg>`;
+    };
+
+    // ── 3. CARD SẢN PHẨM (Đã sửa link ảnh Ngrok) ──
+    const createProductCard = (item) => {
+        // Nối link ảnh chuẩn
+        const fullImageUrl = `https://straticulate-obtusely-ernesto.ngrok-free.dev/${item.imageUrl}`;
+        
+        return `
         <div class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-500">
-            <div class="relative w-full aspect-square rounded-3xl overflow-hidden mb-6">
-                <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
-                ${item.isHot ? '<span class="absolute top-4 left-4 bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Hot</span>' : ''}
+            <div class="relative w-full aspect-square rounded-3xl overflow-hidden mb-6 bg-gray-100 flex items-center justify-center">
+                <img 
+                    src="${fullImageUrl}" 
+                    alt="${item.productName}" 
+                    class="max-w-full max-h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                >
             </div>
+
             <div>
-                <h3 class="text-xl font-bold text-on-surface mb-2">${item.name}</h3>
-                <div class="flex items-center justify-between mt-4">
-                    <span class="text-2xl font-black text-primary">${item.price}</span>
+                <h3 class="text-xl font-bold text-on-surface mb-1">
+                    ${item.productName}
+                </h3>
+
+                <div class="flex items-center gap-2 mb-3">
+                    ${renderStars(item.rating)} 
+                    <span class="text-xs text-on-surface-variant">
+                        ${(item.rating).toFixed(1)}
+                    </span>
+                </div>
+
+                <div class="flex items-center justify-between mt-2">
+                    <span class="text-2xl font-black text-primary">
+                        ${item.price}
+                    </span>
+
                     <button class="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
                         <span class="material-symbols-outlined">add_shopping_cart</span>
                     </button>
                 </div>
             </div>
-        </div>
-    `;
-
-    const viewsData = {
-        "best-seller": [
-            { name: "Kem Tuyết Azure", price: "35.000đ", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCxhn5D3VnVsFxMiKNCVRN6BkGiaYFWPGYCW5AJmfASbU5gt7sLjUOLuZmqwyRV0p3YuqwXKZudSabnYY4-uxP6Bx4XdV9vkE1MES4sIFqcBn8D5JV3dJs0DMGeY2RxfEEUeg9Ttm8qvumwwD0uaHsJtZs_MMCDW7ppmJlOkwkmCPYjisx5F8tlAYNWaCSv24Ydkt2SDvTfwwdSq3M9cIcqtUt092Uukr160UY6ZAxoQchBSK_nO7EN3VmD_zdQuCHzq8h0eiogCrs9", isHot: true },
-            { name: "Trà Hoa Quả", price: "45.000đ", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCFp_walG5A05Y1Yvk-MbBN4O5LruH_He3C3ItOvjgXs1o7WSta45YV14nxmLSuxFzSx4kibGpeT1QARXULb3hhsY1OXWjZh8gjjjR6afqexPuzA0AN4CcqluDLSHJQV9oEl6wED-A5jL4H_IILVxLfKkKNBxhM6YKmqbcemKkt3W7C5sWbdycIK-6UXnbeYYq3WOpYUnJZHCgMqLcfjsU1k0ar0Z2RfGMdZbCt6y-3zkEKXdsz1vEShx---6lYDSJ-gI8t-Pqnk59w" },
-            { name: "Matcha Sữa Tươi", price: "48.000đ", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDphMmMrMSyT-XeVhRr_C6xSvhmlJGiyh_TLGeR33svid8VYE0KtTB6Cfa-fwUzIC-Ouu9kyXMd5i6jn11hE66mIiwbgadGSIsY2sjzWpY4-FSSJUQiDy-_uOetfG3ISPHoOCng5bfeb9FjVaRB_XGYaQj0r_pHLiD-3TyaGfB7xhpc6oF2KlWnhb3yI2r5uUrd1Khw68mzzmDOXDu1XOcaivJdkgvArKnCHJIHSxhxLceATnmSXMUL9jysEIDF0a_DLQuvP3sweqNV" },
-            // Thêm các món khác...
-        ],
-        "ice-cream": [
-            { name: "Vani Thượng Hạng", price: "25.000đ", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCuIPKgX82KydZdxkXBPPIOn80Adq63dO1wkzdbI4H-wn4UxWeDTe-EKygiZw81nhVb6HwfvNiCT3Bm4CKeSiLjBStiGftCrxzlgS7DRiqB5To1ujk-rxcMYJrPNAxh9fEwkYzZiWLw2C8HMs682TVf2CwhenWi3qFHuX4AViXS7MRk-ggiQA0ncGooUfMHyrTq-D-82Q_FOHuHVlj0SuGZ5doNFUWB5HBaAoFbromnOUl20uNt5WnQ6GLYvCEm_STYHpI4TxhfU0DU", isHot: true },
-            { name: "Trà Xanh Zen", price: "28.000đ", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuC_c4jcNg9cjqMSqdGWlGz2QVdzywZSIjrkSYVtB3h8qY3iqnzFlu2zximvOkWKEisjBuEABsib6vhhNiBTB-XhQxyOEO1crkbJwxup6uCruRrK9XCrkbJRt0Htj9vU3Wayj3hhCdK9jv7hM_FfHcIfSkGZN3Kp3Mq3c-7rqWZ6NGV5EMPO-gTQSxZZLyu8Iptlv_kqpT2rNALD6PqfA3VY3J0ZaZ009bkj8zpcOLp-lzjLpCYCFHmM0kr4jqA_dLx6UXawHeAxX5pH" },
-            { name: "Socola Đậm Đà", price: "25.000đ", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuC-0VMX44fUwx5lW083i4mFw_v2ca7cfWuVXmzkZmBPIcgOA-jNEiU5iqimSmuvyheXoFjMsiTLbWqztfQbjuUwD0583Rsl1xTooD1oAmkv_qKjYAPpYKmR-cR_mwtLmfWHLgB7Y8_lYaGamRC1XXkVchxao897rg4LkmEFIs47npcUBhsbtuuKAKcOm4QjsScji0mEr_pGPD1LFoBt5IdL_XjaCp8G2JWoZ8qlpIR1nVB5qNLdBvGDzIeor1-ngkP4A0fAJvSLKkRR" },
-        ]
+        </div>`;
     };
 
+    // ── 4. LOGIC RENDER (Hỗ trợ "all" và filter) ──
     const renderContent = (categoryId) => {
         renderContainer.style.opacity = 0;
         setTimeout(() => {
-            const items = viewsData[categoryId] || [];
-            if (items.length > 0) {
-                renderContainer.innerHTML = items.map(item => createProductCard(item)).join('');
+            let items = [];
+            if (categoryId === "all") {
+                items = viewsData;
             } else {
-                renderContainer.innerHTML = "<p class='col-span-full text-center py-20 text-on-surface-variant'>Đang cập nhật sản phẩm...</p>";
+                items = viewsData.filter(item => item.category === categoryId);
             }
+
+            renderContainer.innerHTML = items.length
+                ? items.map(item => createProductCard(item)).join('')
+                : "<p class='col-span-full text-center py-20 text-on-surface-variant'>Không tìm thấy sản phẩm phù hợp...</p>";
+            
             renderContainer.style.opacity = 1;
         }, 200);
     };
 
-    // Logic nút bấm (giữ nguyên của bạn)
+    // Gán sự kiện click cho các nút phân loại
     categoryBtns.forEach(btn => {
         btn.addEventListener("click", (e) => {
             const id = e.currentTarget.getAttribute("data-category");
@@ -448,15 +531,6 @@ function initDynamicMenu() {
         });
     });
 
-    renderContent("best-seller"); // Mặc định
+    // Mặc định load "Tất cả" sản phẩm khi vào trang
+    renderContent("all");
 }
-document.addEventListener('click', (e) => {
-    if (e.target.closest('.category-btn')) {
-      const btn = e.target.closest('.category-btn');
-  
-      document.querySelectorAll('.category-btn')
-        .forEach(b => b.classList.remove('active'));
-  
-      btn.classList.add('active');
-    }
-  });
