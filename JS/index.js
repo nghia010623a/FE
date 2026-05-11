@@ -513,13 +513,24 @@ async function initDynamicMenu() {
                     ${Number(item.price).toLocaleString('en-US')}đ
                     </span>
 
-                    <button style="background-color:rgba(111, 172, 216)" class="w-12 h-12 rounded-2xl  text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
+                    <!-- SỬA TẠI ĐÂY: id="addCart" -> class="add-to-cart-btn" và thêm data-product-id -->
+                    <button 
+                        style="background-color:rgba(111, 172, 216)" 
+                        class="add-to-cart-btn w-12 h-12 rounded-2xl text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                        data-product-id="${item.id}"
+                    >
                         <span class="material-symbols-outlined">add_shopping_cart</span>
                     </button>
                 </div>
             </div>
         </div>`;
     };
+
+//logic addCart
+
+
+
+
 
     // ── 4. LOGIC RENDER (Hỗ trợ "all" và filter) ──
     const renderContent = (categoryId) => {
@@ -553,3 +564,175 @@ async function initDynamicMenu() {
     // Mặc định load "Tất cả" sản phẩm khi vào trang
     renderContent("all");
 }
+
+// ==========================================
+// LOGIC GIỎ HÀNG & API
+// ==========================================
+
+// 1. Hàm xử lý hiệu ứng bay (Giữ nguyên của bạn, có sửa nhẹ để mượt hơn)
+function animateFlyToCart(imgElement, cartElement) {
+    if (!imgElement || !cartElement) return;
+
+    const flyImg = imgElement.cloneNode(true); // Tạo bản sao của ảnh
+    const imgRect = imgElement.getBoundingClientRect();
+    const cartRect = cartElement.getBoundingClientRect();
+
+    // Cấu hình bản sao để bắt đầu bay
+    Object.assign(flyImg.style, {
+        position: 'fixed',
+        left: `${imgRect.left}px`,
+        top: `${imgRect.top}px`,
+        width: `${imgRect.width}px`,
+        height: `${imgRect.height}px`,
+        transition: 'all 0.9s cubic-bezier(0.42, 0, 0.58, 1)', // Chậm lại xíu cho đẹp
+        zIndex: '1000',
+        borderRadius: '50%',
+        pointerEvents: 'none',
+        opacity: '1'
+    });
+
+    document.body.appendChild(flyImg);
+
+    // Bắt đầu bay tới giỏ hàng (dùng setTimeout để trigger transition)
+    setTimeout(() => {
+        Object.assign(flyImg.style, {
+            left: `${cartRect.left + cartRect.width/2 - 10}px`,
+            top: `${cartRect.top + cartRect.height/2 - 10}px`,
+            width: '20px',
+            height: '20px',
+            opacity: '0.2'
+        });
+    }, 0);
+
+    // Xóa bản sao khi xong và làm giỏ hàng rung nhẹ
+    flyImg.addEventListener('transitionend', () => {
+        flyImg.remove();
+        // Hiệu ứng rung của Tailwind (đảm bảo bạn có class này hoặc animate-ping)
+        cartElement.classList.add('animate-bounce'); 
+        setTimeout(() => cartElement.classList.remove('animate-bounce'), 400);
+    });
+}
+
+// 2. Hàm CALL API POST để lưu vào giỏ hàng trên Server
+// Viết dạng async để xử lý bất đồng bộ
+async function addToCartApi(productId) {
+    // --- CẤU HÌNH API CỦA BẠN TẠI ĐÂY ---
+    
+    // Nếu API cần Token đăng nhập, lấy nó từ localStorage hoặc biến global
+    const token = localStorage.getItem('userToken'); 
+
+    // Dữ liệu body gửi lên, thường API cần productId và quantity
+    const bodyData = {
+        productId: productId,
+        quantity: 1 // Mặc định add 1 món
+    };
+
+    try {
+        console.log(`Đang gọi API add sản phẩm ${productId} to server...`);
+        
+        const response =await fetch("https://straticulate-obtusely-ernesto.ngrok-free.dev/api/users/cart", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                "ngrok-skip-browser-warning": "69420"
+            },
+            body: JSON.stringify(bodyData)
+        });
+
+        if (!response.ok) {
+            // Xử lý lỗi từ server (vd: hết hàng, unauth...)
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Lỗi khi thêm vào giỏ hàng server');
+        }
+
+        const result = await response.json();
+        console.log('API Response thành công:', result);
+        
+        // --- CẬP NHẬT BADGE GIỎ HÀNG ---
+        // Sau khi POST thành công, server thường trả về tổng số lượng mới trong giỏ
+        // Bạn dùng nó để cập nhật UI. Giả sử server trả về field result.totalQuantity
+        if (result.totalQuantity !== undefined) {
+            updateCartBadgeUI(result.totalQuantity);
+        } else {
+            // Nếu API ko trả về tổng số, bạn có thể phải call 1 API GET khác để lấy count
+            // Hoặc tạm thời tăng UI lên 1 (optimistic update)
+            console.warn('API không trả về tổng số lượng, không thể cập nhật badge chuẩn.');
+        }
+
+        return result;
+
+    } catch (error) {
+        console.error('Lỗi API AddToCart:', error);
+        alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+        // Bạn có thể xử lý rollback UI nếu dùng optimistic update tại đây
+        return null;
+    }
+}
+
+// 3. Hàm cập nhật số lượng hiển thị trên Badge (Chỉ thuần cập nhật UI)
+function updateCartBadgeUI(count) {
+    const badge = document.getElementById('cart-count'); // Đảm bảo ID này đúng với badge trên header
+    if (badge) {
+        badge.innerText = count;
+        // Ẩn badge nếu số lượng = 0
+        badge.style.display = 'flex';
+    }
+}
+
+// 4. Gắn sự kiện Click toàn cục (Event Delegation)
+document.addEventListener('click', async (e) => {
+    // Tìm xem cú click có nằm trong hoặc là nút add-to-cart không
+    const btn = e.target.closest('.add-to-cart-btn'); 
+    
+    if (btn) {
+        e.preventDefault(); // Ngăn chặn hành vi mặc định nếu là thẻ a
+
+        // Lấy ID sản phẩm từ data attribute
+        const productId = btn.getAttribute('data-product-id');
+        if (!productId) return;
+
+        // Tìm ảnh sản phẩm trong cùng card để làm hiệu ứng bay
+        const productCard = btn.closest('.glass-card');
+        const productImg = productCard.querySelector('img'); // Lấy ảnh chính đầu tiên
+        
+        // Tìm icon giỏ hàng trên header làm đích đến (đảm bảo ID này đúng)
+        const cartIcon = document.getElementById('cart-icon');
+
+        // CHẠY HIỆU ỨNG BAY TRƯỚC (Cho cảm giác mượt mà, ko đợi API)
+        animateFlyToCart(productImg, cartIcon);
+
+        // GỌI API POST ĐỂ LƯU TRÊN SERVER
+        await addToCartApi(productId);
+    }
+});
+
+// --- KHỞI TẠO KHI LOAD TRANG ---
+// Khi load trang, bạn nên call 1 API GET để lấy tổng số lượng giỏ hàng hiện tại trên server và update badge
+async function initCartBadgeOnLoad() {
+    try {
+
+        const response = await fetch("https://straticulate-obtusely-ernesto.ngrok-free.dev/api/users/cart", {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                "ngrok-skip-browser-warning": "69420"
+            }
+        });
+        console.log(response.status);
+        const data = await response.json();
+        let dataM=data.quantity;
+        console.log(dataM);
+
+        updateCartBadgeUI(dataM);
+
+    } catch (e) {
+
+        console.log(e);
+
+        updateCartBadgeUI(dataM);
+    }
+}
+
+initCartBadgeOnLoad();
