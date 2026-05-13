@@ -1,3 +1,5 @@
+// const API_BASE = "https://abstracts-difficulty-ecological-especially.trycloudflare.com/";
+
 function showErrorModal(text) {
     const modal = document.getElementById('errorModal');
     modal.style.display = 'flex';
@@ -11,7 +13,7 @@ function showErrorModal(text) {
   }
   document.getElementById("loginwithgoogle").addEventListener("click", function () {
     // URL này là mặc định của Spring Security
-    window.location.href = "https://straticulate-obtusely-ernesto.ngrok-free.dev/oauth2/authorization/google?prompt=select_account";
+    window.location.href = API_BASE+"oauth2/authorization/google?prompt=select_account";
     });
 
 async function checkLogin()
@@ -30,12 +32,12 @@ async function checkLogin()
 
     try {
 
-        const response = await fetch("https://straticulate-obtusely-ernesto.ngrok-free.dev/api/checkLogin", {
+        const response = await fetch(API_BASE+"api/checkLogin", {
             method: "POST",
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420"
+                // "ngrok-skip-browser-warning": "69420"
             },
             body: JSON.stringify({ identifier, password})
         });

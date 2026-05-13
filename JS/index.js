@@ -1,7 +1,11 @@
 // ==========================================
 // 1. CẤU HÌNH & BIẾN TOÀN CỤC
 // ==========================================
-const API_BASE = "https://straticulate-obtusely-ernesto.ngrok-free.dev/";
+// const API_BASE = "https://straticulate-obtusely-ernesto.ngrok-free.dev/";
+
+// const API_BASE = "https://abstracts-difficulty-ecological-especially.trycloudflare.com/";
+
+// import API_BASE from "./config.js";
 
 // ==========================================
 // 2. CÁC HÀM TIỆN ÍCH (UI, MODAL, AVATAR)
@@ -97,7 +101,6 @@ function initUpdateProfileForm() {
                 credentials: "include",
                 headers: {
                     "Content-Type": "application/json",
-                    "ngrok-skip-browser-warning": "69420"
                 },
                 body: JSON.stringify({ phonenum: phone, dob: dob, address: address })
             });
@@ -124,7 +127,7 @@ async function getDetailAccount() {
             credentials: "include", 
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420"
+                // "ngrok-skip-browser-warning": "69420"
             },
         });
 
@@ -169,7 +172,7 @@ async function logoutService() {
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420"
+                // "ngrok-skip-browser-warning": "69420"
             },
         });
 
@@ -196,7 +199,7 @@ async function refreshToken() {
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420"
+                // "ngrok-skip-browser-warning": "69420"
             },
         });
         if (!response.ok) console.warn("Refresh token expired");
@@ -309,6 +312,8 @@ async function loadPage(url) {
     else if (path === "update-profile") page = "HTML/updateProfile.html";
     else if (path === "menu") page = "HTML/menu.html";
     else if (path === "icecream") page = "HTML/icecream.html";
+    else if (path === "cart") page = "HTML/cart.html";
+    else if (path === "notification") page = "HTML/notification.html";
 
     try {
         const res = await fetch(page);
@@ -391,11 +396,11 @@ window.onpopstate = function () {
 async function loadProduct() {
     try {
         const response = await fetch(
-            'https://straticulate-obtusely-ernesto.ngrok-free.dev/api/users/products',
+            API_BASE+'api/users/products',
             {
                 method: "GET",
-                headers: {
-                    "ngrok-skip-browser-warning": "true", // Bỏ qua màn hình cảnh báo
+                headers: {// Bỏ qua màn hình cảnh báo
+                    // "ngrok-skip-browser-warning": "true", 
                     "Content-Type": "application/json"
                 }
             }
@@ -467,10 +472,10 @@ async function initDynamicMenu() {
     // ── 3. CARD SẢN PHẨM (Đã sửa link ảnh Ngrok) ──
     const createProductCard = (item) => {
         // Nối link ảnh chuẩn
-        const fullImageUrl = `https://straticulate-obtusely-ernesto.ngrok-free.dev/${item.imageUrl}`;
+        const fullImageUrl = API_BASE+`${item.imageUrl}`;
         
         return `
-<div style="cursor:pointer" class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between 
+<div style="cursor:pointer;box-shadow:inset 0 8px 32px 0 white" class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between 
                 border-2 border-transparent hover:border-blue-600 hover:shadow-2xl transition-all duration-500">        
                 
                 <div class="absolute top-2 left-2 w-16 h-16 z-20 
@@ -517,7 +522,7 @@ async function initDynamicMenu() {
                     <button 
                         style="background-color:rgba(111, 172, 216)" 
                         class="add-to-cart-btn w-12 h-12 rounded-2xl text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                        data-product-id="${item.id}"
+                        data-product-id="${item.productId}"
                     >
                         <span class="material-symbols-outlined">add_shopping_cart</span>
                     </button>
@@ -623,49 +628,44 @@ async function addToCartApi(productId) {
 
     // Dữ liệu body gửi lên, thường API cần productId và quantity
     const bodyData = {
-        productId: productId,
-        quantity: 1 // Mặc định add 1 món
+        productId: Number(productId),
+        quantity: 1 
     };
 
     try {
         console.log(`Đang gọi API add sản phẩm ${productId} to server...`);
         
-        const response =await fetch("https://straticulate-obtusely-ernesto.ngrok-free.dev/api/users/cart", {
+        const response = await fetch( API_BASE+"api/users/cart", {
             method: "POST",
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420"
+                // "ngrok-skip-browser-warning": "69420"
             },
             body: JSON.stringify(bodyData)
         });
-
+    
+        // Luôn đọc text trước
+        const text = await response.text();
+    
         if (!response.ok) {
-            // Xử lý lỗi từ server (vd: hết hàng, unauth...)
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Lỗi khi thêm vào giỏ hàng server');
+            throw new Error(text || `Lỗi server: ${response.status}`);
         }
-
-        const result = await response.json();
-        console.log('API Response thành công:', result);
-        
-        // --- CẬP NHẬT BADGE GIỎ HÀNG ---
-        // Sau khi POST thành công, server thường trả về tổng số lượng mới trong giỏ
-        // Bạn dùng nó để cập nhật UI. Giả sử server trả về field result.totalQuantity
-        if (result.totalQuantity !== undefined) {
-            updateCartBadgeUI(result.totalQuantity);
-        } else {
-            // Nếu API ko trả về tổng số, bạn có thể phải call 1 API GET khác để lấy count
-            // Hoặc tạm thời tăng UI lên 1 (optimistic update)
-            console.warn('API không trả về tổng số lượng, không thể cập nhật badge chuẩn.');
+    
+        console.log('Response từ server:', text); // "OK"
+    
+        // Tăng badge lên 1 vì server chỉ trả "OK", không trả số lượng
+        const badge = document.getElementById('cart-count');
+        if (badge) {
+            const current = parseInt(badge.innerText) || 0;
+            updateCartBadgeUI(current + 1);
         }
-
-        return result;
-
+    
+        return text;
+    
     } catch (error) {
         console.error('Lỗi API AddToCart:', error);
         alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
-        // Bạn có thể xử lý rollback UI nếu dùng optimistic update tại đây
         return null;
     }
 }
@@ -708,16 +708,14 @@ document.addEventListener('click', async (e) => {
 });
 
 // --- KHỞI TẠO KHI LOAD TRANG ---
-// Khi load trang, bạn nên call 1 API GET để lấy tổng số lượng giỏ hàng hiện tại trên server và update badge
 async function initCartBadgeOnLoad() {
     try {
 
-        const response = await fetch("https://straticulate-obtusely-ernesto.ngrok-free.dev/api/users/cart", {
+        const response = await fetch(API_BASE+"api/users/cart", {
             method: "GET",
             credentials: "include",
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420"
             }
         });
         console.log(response.status);

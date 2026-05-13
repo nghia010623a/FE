@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bingchun - Giỏ Hàng Của Bạn</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;family=Be+Vietnam+Pro:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        /* CSS Reset & Variables */
+        :root {
+            --primary: #006977;
+            --primary-gradient: linear-gradient(135deg, #006977, #50e1f9);
+            --bg-color: #e0f2fe; /* Light azure */
+            --glass-bg-1: rgba(255, 255, 255, 0.45);
+            --glass-bg-2: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 105, 119, 0.15);
+            --text-main: #2a343a;
+            --text-muted: #566167;
+            --error: #a83836;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Animated Background Canvas */
+        #boba-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass-bg-1);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow), inset 0 0 10px rgba(255,255,255,0.5);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .glass-deep {
+            background: var(--glass-bg-2);
+            backdrop-filter: blur(45px);
+            -webkit-backdrop-filter: blur(45px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.6), 0 10px 40px 0 rgba(0, 0, 0, 0.08);
+            border-radius: 30px;
+        }
+
+        /* Layout */
+        .layout-container {
+            display: flex;
+            min-height: 100vh;
+            padding: 2rem;
+            gap: 2.5rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            position: relative;
+            perspective: 1000px; /* For 3D transforms */
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            padding: 2.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            flex-shrink: 0;
+            position: sticky;
+            top: 2rem;
+            height: calc(100vh - 4rem);
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar:hover {
+            transform: translateZ(10px);
+        }
+
+        .brand h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.2rem;
+            text-shadow: 0 4px 10px rgba(0, 105, 119, 0.2);
+        }
+        .brand p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1.2rem 1.5rem;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-radius: 20px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.5);
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.4s ease;
+            z-index: -1;
+            border-radius: 20px;
+        }
+
+        .nav-item:hover::before, .nav-item.active::before {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--primary);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+            transform: translateX(12px);
+        }
+
+        .nav-item.active {
+            font-weight: 800;
+            border-left: 5px solid var(--primary);
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        /* Banner */
+        .welcome-banner {
+            padding: 2.5rem 3.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: transform 0.4s ease;
+        }
+        
+        .welcome-banner:hover {
+            transform: translateZ(15px) rotateX(2deg);
+        }
+
+        .flying-text {
+            font-size: 3.2rem;
+            font-weight: 800;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: floatText 4s ease-in-out infinite;
+            text-shadow: 0 5px 15px rgba(80, 225, 249, 0.3);
+        }
+
+        @keyframes floatText {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        /* Asymmetric Layout for Cart & Summary */
+        .cart-layout {
+            display: grid;
+            grid-template-columns: 1fr 420px;
+            gap: 3.5rem;
+            align-items: start;
+        }
+
+        /* Cart Items Grid (Asymmetric) */
+        .cart-items {
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        .cart-item {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1.8rem;
+            align-items: center;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .cart-item:nth-child(even) {
+            transform: translateX(30px);
+        }
+
+        .cart-item:hover {
+            transform: scale(1.03) translateY(-8px) translateZ(20px) !important;
+            z-index: 10;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1), inset 0 0 30px rgba(255,255,255,0.8);
+        }
+        
+        /* Custom Checkbox */
+        .item-checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-right: 0.5rem;
+        }
+
+        .custom-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border: 2px solid rgba(0, 105, 119, 0.4);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .custom-checkbox:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(80, 225, 249, 0.8), inset 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        .custom-checkbox::after {
+            content: 'check';
+            font-family: 'Material Symbols Outlined';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .custom-checkbox:checked::after {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .custom-checkbox:hover {
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .item-img {
+            width: 130px;
+            height: 130px;
+            border-radius: 24px;
+            object-fit: cover;
+            box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+            transition: transform 0.4s ease;
+        }
+        
+        .cart-item:hover .item-img {
+            transform: rotate(-3deg) scale(1.05);
+        }
+
+        .item-details {
+            flex-grow: 1;
+        }
+
+        .item-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .item-desc {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 1.2rem;
+            font-weight: 500;
+        }
+
+        .item-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-price {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-shadow: 0 2px 4px rgba(0, 105, 119, 0.1);
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 0.6rem 1.2rem;
+            border-radius: 30px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.03);
+            border: 1px solid rgba(255,255,255,0.9);
+        }
+
+        .qty-btn {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        .qty-btn:hover {
+            transform: scale(1.3);
+            color: #00889c;
+        }
+
+        .qty-num {
+            font-weight: 800;
+            font-size: 1.2rem;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .delete-btn {
+            border: none;
+            background: rgba(255, 255, 255, 0.6);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .delete-btn:hover {
+            background: #ffe5e5;
+            color: var(--error);
+            transform: rotate(15deg) scale(1.1);
+            box-shadow: 0 8px 15px rgba(168, 56, 54, 0.2);
+        }
+
+        /* Order Summary */
+        .order-summary {
+            padding: 3rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.8rem;
+            position: sticky;
+            top: 2rem;
+            backdrop-filter: blur(60px);
+            -webkit-backdrop-filter: blur(60px);
+            background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 100%);
+            transform-style: preserve-3d;
+            transition: transform 0.4s ease;
+            box-shadow: 0 15px 50px rgba(0, 105, 119, 0.1), inset 0 0 20px rgba(255,255,255,0.8);
+        }
+        
+        .order-summary:hover {
+            transform: translateZ(10px);
+        }
+
+        .summary-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--text-main);
+            position: relative;
+            padding-bottom: 1rem;
+        }
+        
+        .summary-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 60px; height: 4px;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .summary-row.total {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-main);
+            border-top: 2px dashed rgba(0,0,0,0.15);
+            padding-top: 1.8rem;
+            margin-top: 0.5rem;
+            align-items: center;
+        }
+
+        .total-price {
+            color: var(--primary);
+            font-size: 1.8rem;
+            text-shadow: 0 2px 5px rgba(0, 105, 119, 0.15);
+        }
+
+        .coupon-box {
+            display: flex;
+            background: rgba(255,255,255,0.6);
+            border-radius: 20px;
+            padding: 0.8rem 1.2rem;
+            align-items: center;
+            gap: 0.8rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);
+            transition: box-shadow 0.3s;
+        }
+        
+        .coupon-box:focus-within {
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.03), 0 0 0 2px rgba(80, 225, 249, 0.5);
+        }
+
+        .coupon-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            flex-grow: 1;
+            font-family: inherit;
+            font-size: 1.05rem;
+            color: var(--text-main);
+        }
+
+        .coupon-box button {
+            border: none;
+            background: transparent;
+            color: var(--primary);
+            font-weight: 800;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: transform 0.2s;
+        }
+        
+        .coupon-box button:hover {
+            transform: scale(1.05);
+        }
+
+        /* Glowing Button */
+        .checkout-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 1.4rem;
+            border-radius: 30px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+            box-shadow: 0 10px 30px rgba(80, 225, 249, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .checkout-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            transform: skewX(-20deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            20% { left: 200%; }
+            100% { left: 200%; }
+        }
+
+        .checkout-btn:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(80, 225, 249, 0.7);
+        }
+
+        .terms {
+            font-size: 0.85rem;
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            line-height: 1.5;
+        }
+
+        .terms a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px solid var(--primary);
+            transition: opacity 0.2s;
+        }
+        
+        .terms a:hover {
+            opacity: 0.7;
+        }
+
+        /* Peek-a-boo Mascot */
+        .mascot-peek {
+            position: fixed;
+            bottom: -50px;
+            right: 50px;
+            width: 160px;
+            z-index: 100;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.25));
+            cursor: pointer;
+        }
+
+        .mascot-peek:hover {
+            transform: translateY(-70px) rotate(-10deg) scale(1.15);
+        }
+
+        .mascot-speech {
+            position: absolute;
+            bottom: 120%;
+            right: 40%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.2rem;
+            border-radius: 20px;
+            border-bottom-right-radius: 0;
+            width: max-content;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(30px) scale(0.9);
+            font-weight: 600;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .mascot-peek:hover .mascot-speech {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 1024px) {
+            .cart-layout {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .layout-container {
+                padding: 1.5rem;
+            }
+            .cart-item:nth-child(even) {
+                transform: none;
+            }
+            .welcome-banner {
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="layout-container" style="top:60px">
+
+<main class="main-content">
+
+<div class="cart-layout">
+<!-- Cart Items (Asymmetric Grid) -->
+<div class="cart-items">
+<!-- Item 1 -->
+<div class="cart-item glass-deep">
+<div class="item-checkbox-container">
+<input checked="" class="custom-checkbox" type="checkbox"/>
+</div>
+<img alt="Trà Sữa Trân Châu Hoàng Kim" class="item-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGRNRu8D4LR5IpCIHKxk6S1wd0_GeQVtK1vCc1tlJF60C1R0FL1hFe8J1a99nlC424oWF8-iuJ3qkJqw6eEePFj5jxQwbMJ3oakb5GCHsxUO1ydDw5QCJgOB7pfRgGX_pINqONSai92g4RpuDUGm5R13TvELsUNxnKwDn9H9Faj2fzYPYmRuaD0tWQZPmfraQeEYgTOARU2TDYH1Sdp7kTOr591MOr7EVg42se1ttjehbVkAQ8M2KHV-up5Gxfl96bkGPZlSYwyeON"/>
+<div class="item-details">
+<h3 class="item-title">Trà Sữa Trân Châu Hoàng Kim</h3>
+<p class="item-desc">Size L • 50% Đường • 30% Đá</p>
+<div class="item-actions">
+<span class="item-price">55.000đ</span>
+<div class="qty-control">
+<button class="qty-btn"><span class="material-symbols-outlined">remove</span></button>
+<span class="qty-num">1</span>
+<button class="qty-btn"><span class="material-symbols-outlined">add</span></button>
+</div>
+</div>
+</div>
+<button class="delete-btn"><span class="material-symbols-outlined">delete</span></button>
+</div>
+<!-- Item 2 -->
+<div class="cart-item glass-deep">
+<div class="item-checkbox-container">
+<input checked="" class="custom-checkbox" type="checkbox"/>
+</div>
+<img alt="Trà Trái Cây Nhiệt Đới" class="item-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyWMb8F-I625jZkCBE8ySlWE7AghDdnIoCKGB4mVeaenRcaZZPBjnnoutgY6Z7T-xKRg5KQBHxuCdsl8XiFJLBwubmZzlpmhQICS7OqHZRXuhsMv2aGi0YaETrxsMW1sPsN2np8qkG1QpbR_QCf6_DuDK0X8Viy9OgK0RyH19OceqmSqi1hfZus9d6MppEcxJH97KIEw2i5PEaZN1nxzpYvfzK5z_Cdc6lAvGzLZtn9vBMXyYzScJGul57xQMvwhQ4CNEDeS54Fwun"/>
+<div class="item-details">
+<h3 class="item-title">Trà Trái Cây Nhiệt Đới</h3>
+<p class="item-desc">Size M • 70% Đường • Ít Đá</p>
+<div class="item-actions">
+<span class="item-price">45.000đ</span>
+<div class="qty-control">
+<button class="qty-btn"><span class="material-symbols-outlined">remove</span></button>
+<span class="qty-num">2</span>
+<button class="qty-btn"><span class="material-symbols-outlined">add</span></button>
+</div>
+</div>
+</div>
+<button class="delete-btn"><span class="material-symbols-outlined">delete</span></button>
+</div>
+<!-- Item 3 -->
+<div class="cart-item glass-deep">
+<div class="item-checkbox-container">
+<input class="custom-checkbox" type="checkbox"/>
+</div>
+<img alt="Kem Vani Tuyết" class="item-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCf4UH4l9TYdUL6yB9VTJkXmESjPm1TZytTJsdSWCvg-JpHx7xS6babhOCVK5IZqYsohwf9nFoz7SkVdHlIzVH1Yxht4VcUXINSFXi30FJJ17fABEp5DXCXv29QtD7iAZQN1mFfbMVaIgkg3TMuZSrP2Js9enHNqyHEL74gOtRs2D4VYGzgAxrklFnY47SINs8yZjoDyO9uQX5MENl5S-2X9gb8PpMNQDM9KIH9t3vK6ixg_Ike8S10JYu2JHy3eVmd4CN2fBrgJP0N"/>
+<div class="item-details">
+<h3 class="item-title">Kem Vani Tuyết</h3>
+<p class="item-desc">Ly Giấy • Thêm Topping Kẹo Dẻo</p>
+<div class="item-actions">
+<span class="item-price">25.000đ</span>
+<div class="qty-control">
+<button class="qty-btn"><span class="material-symbols-outlined">remove</span></button>
+<span class="qty-num">1</span>
+<button class="qty-btn"><span class="material-symbols-outlined">add</span></button>
+</div>
+</div>
+</div>
+<button class="delete-btn"><span class="material-symbols-outlined">delete</span></button>
+</div>
+</div>
+<!-- Order Summary Panel -->
+<aside class="order-summary glass-panel">
+<h3 class="summary-title">Tóm tắt đơn hàng</h3>
+<div class="summary-row">
+<span>Tạm tính</span>
+<strong>170.000đ</strong>
+</div>
+<div class="summary-row">
+<span>Phí vận chuyển</span>
+<strong>15.000đ</strong>
+</div>
+<div class="summary-row" style="color: var(--primary);">
+<span>Giảm giá</span>
+<strong>-10.000đ</strong>
+</div>
+<div class="summary-row total">
+<span>Tổng cộng</span>
+<span class="total-price">175.000đ</span>
+</div>
+<div class="coupon-box">
+<span class="material-symbols-outlined" style="color: var(--primary);">confirmation_number</span>
+<input placeholder="Nhập mã giảm giá" type="text"/>
+<button>Áp dụng</button>
+</div>
+<button class="checkout-btn">
+<span>Thanh toán ngay</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<p class="terms">
+                        Bằng cách đặt hàng, bạn đồng ý với <a href="#">Điều khoản dịch vụ</a> của chúng tôi.
+                    </p>
+</aside>
+</div>
+</main>
+</div>
+<!-- Peek-a-boo Mascot -->
+<div class="mascot-peek">
+<div class="mascot-speech">
+            "Đừng quên chọn thêm topping<br/><strong style="color: var(--primary);">Trân Châu Hoàng Kim</strong> nhé!"
+        </div>
+<img alt="Bingchun Mascot" src="https://lh3.googleusercontent.com/aida/ADBb0uiVhHFXvryTNO2hd7c2GLyozzIagaMkzetU_ER7nAIE7nGx2kGxnMugaMD-L-HIe6M8abuBqc2xrsUL9wFMwCVOH23_ZIzezEPKkuoiIRkrutD1gV4V6N2e4k_mUSTK_B8jwXVh13BqPB65nTjamx_B2lbfirGF9CWLVRkl2YnS_zZU8mz5YfZNmsm0qrNjHgK4ChZwHQyAheBHjpAhDflMRvlQfaPFIqNJvYtavXRM9kWyhcGbd7y7hcvY8uWuRYjYJroFmrbE7FE" style="width: 100%; height: auto; drop-shadow: 0 5px 15px rgba(0,0,0,0.2);"/>
+</div>
+<!-- Plain JS for Canvas Background Animation -->
+<script>
+        const canvas = document.getElementById('boba-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        const particles = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height + height; // Start below screen
+                // Mix of dark boba and clear bubbles
+                this.type = Math.random() > 0.5 ? 'boba' : 'bubble';
+                this.size = this.type === 'boba' ? Math.random() * 8 + 4 : Math.random() * 15 + 5;
+                this.speedY = Math.random() * 1 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.opacity = this.type === 'boba' ? Math.random() * 0.15 + 0.05 : Math.random() * 0.3 + 0.1;
+            }
+
+            update() {
+                this.y -= this.speedY;
+                this.x += this.speedX;
+
+                // Reset if it goes off screen
+                if (this.y < -50) {
+                    this.y = height + 50;
+                    this.x = Math.random() * width;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                
+                if (this.type === 'boba') {
+                    ctx.fillStyle = `rgba(42, 52, 58, ${this.opacity})`;
+                    ctx.fill();
+                } else {
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity * 0.3})`;
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Create particles
+        for (let i = 0; i < 40; i++) {
+            particles.push(new Particle());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+<script src="../JS/config.js"></script>
+
+<script src="../JS/index.js"></script>
+
+    </script>
+</body></html>

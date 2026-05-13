@@ -1,3 +1,5 @@
+// const API_BASE = "https://abstracts-difficulty-ecological-especially.trycloudflare.com/";
+
 document.addEventListener("DOMContentLoaded", () => {
 const passwordInput = document.getElementById('password');
 const registBt = document.getElementById('regist');
@@ -126,12 +128,12 @@ async function regist() {
 
   try {
 
-      const response = await fetch("https://straticulate-obtusely-ernesto.ngrok-free.dev/api/regist", {
+      const response = await fetch(API_BASE+"api/regist", {
           method: "POST",
           credentials: "include",
           headers: {
               "Content-Type": "application/json",
-              "ngrok-skip-browser-warning": "69420"
+              // "ngrok-skip-browser-warning": "69420"
           },
           body: JSON.stringify({ username, password, email })
       });

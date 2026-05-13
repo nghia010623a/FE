@@ -1,4 +1,4 @@
-const urlBE = "https://straticulate-obtusely-ernesto.ngrok-free.dev/";
+// const API_BASE = "https://abstracts-difficulty-ecological-especially.trycloudflare.com/";
 
 // Dùng DOMContentLoaded thay cho window.onload để tránh bị ghi đè
 document.addEventListener("DOMContentLoaded", function() {
@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const imagePreview = document.getElementById("imagePreview");
     const savedImage = localStorage.getItem("imageUser");
     if (imagePreview && savedImage && savedImage !== "null" && savedImage !== "[object Object]") {
-        imagePreview.src = urlBE + "images/" + savedImage;
+        imagePreview.src = API_BASE + "images/" + savedImage;
     }
     // 3. Gọi API lấy thông tin
     getDetailAccount();
@@ -24,12 +24,12 @@ document.addEventListener("DOMContentLoaded", function() {
 async function getDetailAccount() {
     try {
         console.log("Đang gọi API lấy thông tin tài khoản...");
-        const res = await fetch(urlBE + "api/users/me", {
+        const res = await fetch(API_BASE + "api/users/me", {
             method: "GET",
             credentials: "include", 
             headers: {
                 "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "69420" // Bypass cảnh báo ngrok
+                // "ngrok-skip-browser-warning": "69420" 
             },
         });
 
