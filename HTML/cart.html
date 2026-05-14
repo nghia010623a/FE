@@ -26,7 +26,49 @@
             margin: 0;
             padding: 0;
         }
+/* Container bao ngoài cùng để căn giữa toàn bộ nội dung */
+.cart-page-container {
+    display: flex;
+    justify-content: center; /* Căn giữa theo chiều ngang */
+    padding: 20px;
+    width: 100%;
+}
 
+/* Wrapper giới hạn độ rộng để không bị dãn quá mức trên màn hình máy tính */
+.cart-wrapper {
+    display: flex;
+    gap: 30px; /* Khoảng cách giữa danh sách và tóm tắt */
+    width: 100%;
+    max-width: 1200px; /* Độ rộng "vàng" cho website */
+    align-items: flex-start; /* Để cột Tóm tắt không bị dài ngoằng theo cột trái */
+}
+
+/* Danh sách sản phẩm chiếm phần lớn không gian */
+.cart-list {
+    flex: 2; /* Chiếm 2 phần diện tích */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Cột tóm tắt chiếm ít không gian hơn */
+.order-summary {
+    flex: 1; /* Chiếm 1 phần diện tích */
+    position: sticky; /* Giúp bảng tóm tắt trượt theo khi cuộn trang */
+    top: 20px;
+    min-width: 350px;
+}
+
+/* Mobile responsive: Nếu màn hình nhỏ quá thì xếp chồng lên nhau */
+@media (max-width: 768px) {
+    .cart-wrapper {
+        flex-direction: column;
+    }
+    .order-summary {
+        width: 100%;
+        min-width: unset;
+    }
+}
         body {
             font-family: 'Be Vietnam Pro', sans-serif;
             background: var(--bg-color);
@@ -34,6 +76,8 @@
             overflow-x: hidden;
             min-height: 100vh;
             position: relative;
+            top:60px;
+
         }
 
         h1, h2, h3, h4, h5, h6 {
@@ -633,109 +677,19 @@
     </style>
 </head>
 <body>
-<div class="layout-container" style="top:60px">
-
-<main class="main-content">
-
-<div class="cart-layout">
-<!-- Cart Items (Asymmetric Grid) -->
-<div class="cart-items">
-<!-- Item 1 -->
-<div class="cart-item glass-deep">
-<div class="item-checkbox-container">
-<input checked="" class="custom-checkbox" type="checkbox"/>
-</div>
-<img alt="Trà Sữa Trân Châu Hoàng Kim" class="item-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGRNRu8D4LR5IpCIHKxk6S1wd0_GeQVtK1vCc1tlJF60C1R0FL1hFe8J1a99nlC424oWF8-iuJ3qkJqw6eEePFj5jxQwbMJ3oakb5GCHsxUO1ydDw5QCJgOB7pfRgGX_pINqONSai92g4RpuDUGm5R13TvELsUNxnKwDn9H9Faj2fzYPYmRuaD0tWQZPmfraQeEYgTOARU2TDYH1Sdp7kTOr591MOr7EVg42se1ttjehbVkAQ8M2KHV-up5Gxfl96bkGPZlSYwyeON"/>
-<div class="item-details">
-<h3 class="item-title">Trà Sữa Trân Châu Hoàng Kim</h3>
-<p class="item-desc">Size L • 50% Đường • 30% Đá</p>
-<div class="item-actions">
-<span class="item-price">55.000đ</span>
-<div class="qty-control">
-<button class="qty-btn"><span class="material-symbols-outlined">remove</span></button>
-<span class="qty-num">1</span>
-<button class="qty-btn"><span class="material-symbols-outlined">add</span></button>
-</div>
-</div>
-</div>
-<button class="delete-btn"><span class="material-symbols-outlined">delete</span></button>
-</div>
-<!-- Item 2 -->
-<div class="cart-item glass-deep">
-<div class="item-checkbox-container">
-<input checked="" class="custom-checkbox" type="checkbox"/>
-</div>
-<img alt="Trà Trái Cây Nhiệt Đới" class="item-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyWMb8F-I625jZkCBE8ySlWE7AghDdnIoCKGB4mVeaenRcaZZPBjnnoutgY6Z7T-xKRg5KQBHxuCdsl8XiFJLBwubmZzlpmhQICS7OqHZRXuhsMv2aGi0YaETrxsMW1sPsN2np8qkG1QpbR_QCf6_DuDK0X8Viy9OgK0RyH19OceqmSqi1hfZus9d6MppEcxJH97KIEw2i5PEaZN1nxzpYvfzK5z_Cdc6lAvGzLZtn9vBMXyYzScJGul57xQMvwhQ4CNEDeS54Fwun"/>
-<div class="item-details">
-<h3 class="item-title">Trà Trái Cây Nhiệt Đới</h3>
-<p class="item-desc">Size M • 70% Đường • Ít Đá</p>
-<div class="item-actions">
-<span class="item-price">45.000đ</span>
-<div class="qty-control">
-<button class="qty-btn"><span class="material-symbols-outlined">remove</span></button>
-<span class="qty-num">2</span>
-<button class="qty-btn"><span class="material-symbols-outlined">add</span></button>
-</div>
-</div>
-</div>
-<button class="delete-btn"><span class="material-symbols-outlined">delete</span></button>
-</div>
-<!-- Item 3 -->
-<div class="cart-item glass-deep">
-<div class="item-checkbox-container">
-<input class="custom-checkbox" type="checkbox"/>
-</div>
-<img alt="Kem Vani Tuyết" class="item-img" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCf4UH4l9TYdUL6yB9VTJkXmESjPm1TZytTJsdSWCvg-JpHx7xS6babhOCVK5IZqYsohwf9nFoz7SkVdHlIzVH1Yxht4VcUXINSFXi30FJJ17fABEp5DXCXv29QtD7iAZQN1mFfbMVaIgkg3TMuZSrP2Js9enHNqyHEL74gOtRs2D4VYGzgAxrklFnY47SINs8yZjoDyO9uQX5MENl5S-2X9gb8PpMNQDM9KIH9t3vK6ixg_Ike8S10JYu2JHy3eVmd4CN2fBrgJP0N"/>
-<div class="item-details">
-<h3 class="item-title">Kem Vani Tuyết</h3>
-<p class="item-desc">Ly Giấy • Thêm Topping Kẹo Dẻo</p>
-<div class="item-actions">
-<span class="item-price">25.000đ</span>
-<div class="qty-control">
-<button class="qty-btn"><span class="material-symbols-outlined">remove</span></button>
-<span class="qty-num">1</span>
-<button class="qty-btn"><span class="material-symbols-outlined">add</span></button>
-</div>
-</div>
-</div>
-<button class="delete-btn"><span class="material-symbols-outlined">delete</span></button>
-</div>
-</div>
-<!-- Order Summary Panel -->
-<aside class="order-summary glass-panel">
-<h3 class="summary-title">Tóm tắt đơn hàng</h3>
-<div class="summary-row">
-<span>Tạm tính</span>
-<strong>170.000đ</strong>
-</div>
-<div class="summary-row">
-<span>Phí vận chuyển</span>
-<strong>15.000đ</strong>
-</div>
-<div class="summary-row" style="color: var(--primary);">
-<span>Giảm giá</span>
-<strong>-10.000đ</strong>
-</div>
-<div class="summary-row total">
-<span>Tổng cộng</span>
-<span class="total-price">175.000đ</span>
-</div>
-<div class="coupon-box">
-<span class="material-symbols-outlined" style="color: var(--primary);">confirmation_number</span>
-<input placeholder="Nhập mã giảm giá" type="text"/>
-<button>Áp dụng</button>
-</div>
-<button class="checkout-btn">
-<span>Thanh toán ngay</span>
-<span class="material-symbols-outlined">arrow_forward</span>
-</button>
-<p class="terms">
-                        Bằng cách đặt hàng, bạn đồng ý với <a href="#">Điều khoản dịch vụ</a> của chúng tôi.
-                    </p>
-</aside>
-</div>
-</main>
-</div>
+    <div class="cart-page-container">
+        <div class="cart-wrapper">
+            <!-- Bên trái: Danh sách món -->
+            <div id="cart-container" class="cart-list">
+                 <!-- JS render vào đây -->
+            </div>
+    
+            <!-- Bên phải: Tóm tắt đơn hàng -->
+            <aside class="order-summary glass-panel">
+                 <!-- JS render vào đây -->
+            </aside>
+        </div>
+    </div>
 <!-- Peek-a-boo Mascot -->
 <div class="mascot-peek">
 <div class="mascot-speech">

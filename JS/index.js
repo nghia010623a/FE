@@ -734,3 +734,253 @@ async function initCartBadgeOnLoad() {
 }
 
 initCartBadgeOnLoad();
+let cartData = [];
+let appliedVoucher = null; // Lưu voucher đang áp dụng
+
+document.getElementById("cart-icon").addEventListener("click", async () => {
+    await loadCartFromServer();
+});
+
+async function loadCartFromServer() {
+    try {
+        const response = await fetch(API_BASE + "api/users/cart/getDataCart", {
+            method: "GET",
+            credentials: "include"
+        });
+        if (!response.ok) throw new Error("Network response was not ok");
+        
+        const data = await response.json();
+        
+        // Cực kỳ quan trọng: Thêm thuộc tính isSelected mặc định là true cho mỗi sản phẩm
+        cartData = data.map(item => ({ ...item, isSelected: true }));
+        
+        renderAll();
+    } catch (error) {
+        console.error("Huhu, không lấy được giỏ hàng:", error);
+    }
+}
+
+function renderAll() {
+    renderCart(cartData);
+    renderOrderSummary(cartData);
+}
+
+// --- 1. RENDER GIỎ HÀNG (SỬA CHECKBOX VÀO ĐÚNG VỊ TRÍ) ---
+function renderCart(products) {
+    const container = document.getElementById('cart-container');
+    if (!container) return;
+    container.innerHTML = "";
+
+    products.forEach(product => {
+        // Chú ý: Đã đưa item-checkbox-container VÀO TRONG cart-item
+        const productHTML = `
+            <div class="cart-item glass-deep" data-id="${product.productId}">
+                <div class="item-checkbox-container">
+                    <input type="checkbox" class="custom-checkbox" 
+                           ${product.isSelected ? 'checked' : ''} 
+                           onchange="toggleCheck(${product.productId})" />
+                </div>
+                
+                <img     style="width: 120px; height: 120px; object-fit: contain;" class="item-img" src="${API_BASE}${product.imageUrl}"/>
+                <div class="item-details">
+                    <h3 class="item-title">${product.productName}</h3>
+                    <div class="item-actions">
+                        <span class="item-price">${product.price.toLocaleString('vi-VN')}đ</span>
+                        <div class="qty-control">
+                            <button class="qty-btn" onclick="updateQty(${product.productId}, -1)">
+                                <span class="material-symbols-outlined">remove</span>
+                            </button>
+                            <span class="qty-num">${product.totalQuantity}</span>
+                            <button class="qty-btn" onclick="updateQty(${product.productId}, 1)">
+                                <span class="material-symbols-outlined">add</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button class="delete-btn" onclick="openDeleteModal(${product.productId})">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', productHTML);
+    });
+}
+
+// --- 2. RENDER TÓM TẮT ĐƠN HÀNG (CHỈ TÍNH NHỮNG MÓN ĐƯỢC CHECK) ---
+function renderOrderSummary(products) {
+    const summaryContainer = document.querySelector('.order-summary');
+    if (!summaryContainer) return;
+
+    // Chỉ lọc ra những sản phẩm có isSelected === true
+    const selectedItems = products.filter(p => p.isSelected);
+    
+    const subtotal = selectedItems.reduce((sum, p) => sum + (p.price * (p.totalQuantity || 0)), 0);
+    const shippingFee = subtotal > 0 ? 15000 : 0;
+    
+    // Nếu có voucher thì trừ tiền, không thì 0
+    let discount = 0;
+    if (appliedVoucher && subtotal > 0) {
+        discount = appliedVoucher.value; 
+    }
+    
+    const total = subtotal + shippingFee - discount;
+
+    summaryContainer.innerHTML = `
+        <h3 class="summary-title">Tóm tắt đơn hàng</h3>
+        <div class="summary-row"><span>Tạm tính</span><strong>${subtotal.toLocaleString('vi-VN')}đ</strong></div>
+        <div class="summary-row"><span>Phí vận chuyển</span><strong>${shippingFee.toLocaleString('vi-VN')}đ</strong></div>
+        
+        <!-- Ô chọn Voucher kiểu Shopee -->
+        <div class="voucher-selector glass-panel" onclick="openVoucherModal()" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 10px; margin: 15px 0; border: 1px dashed var(--primary); border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined" style="color: var(--primary);">confirmation_number</span>
+                <span style="font-weight: 500;">${appliedVoucher ? appliedVoucher.code : 'Chọn hoặc nhập mã'}</span>
+            </div>
+            <span class="material-symbols-outlined">chevron_right</span>
+        </div>
+
+        <div class="summary-row" style="color: red;"><span>Giảm giá</span><strong>-${discount.toLocaleString('vi-VN')}đ</strong></div>
+        <div class="summary-row total"><span>Tổng cộng</span><span class="total-price">${total.toLocaleString('vi-VN')}đ</span></div>
+        <button class="checkout-btn" ${subtotal === 0 ? 'disabled' : ''} style="${subtotal === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">Thanh toán ngay</button>
+    `;
+}
+
+// --- 3. CÁC HÀM XỬ LÝ SỰ KIỆN (Window Global) ---
+
+// Xử lý tích chọn Checkbox
+window.toggleCheck = (productId) => {
+    const item = cartData.find(p => p.productId === productId);
+    if (item) {
+        item.isSelected = !item.isSelected; // Đảo ngược trạng thái
+        renderAll(); // Vẽ lại để cập nhật tiền
+    }
+};
+
+// Xử lý Tăng/Giảm và gọi API
+window.updateQty = async (productId, change) => {
+    const item = cartData.find(p => p.productId === productId);
+    if (item) {
+        let newQty = item.totalQuantity + change;
+        if (newQty < 1) newQty = 1; // Không cho giảm dưới 1
+
+        if (item.totalQuantity !== newQty) {
+            // 1. Cập nhật giao diện ngay lập tức cho mượt
+            item.totalQuantity = newQty;
+            renderAll();
+
+            // 2. Gọi API để cập nhật ngầm trên server
+            try {
+                // Thay URL api cập nhật số lượng của bạn vào đây
+                const response = await fetch(`${API_BASE}api/users/cart`, {
+                    method: 'POST', // hoặc PUT
+                    credentials: 'include',
+                                        headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId: productId, quantity: newQty })
+                });
+                
+                if (!response.ok) {
+                    console.error("Lỗi cập nhật số lượng trên server");
+                    // Nếu lỗi, có thể lùi số lượng lại như cũ (optional)
+                }
+            } catch (error) {
+                console.error("Lỗi mạng khi cập nhật:", error);
+            }
+        }
+    }
+};
+
+// --- 4. HỆ THỐNG MODAL (XÓA & VOUCHER) ---
+
+// Mở Modal Xoá
+window.openDeleteModal = (productId) => {
+    const modalHTML = `
+        <div id="custom-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+            <div class="glass-panel" style="background: white; padding: 20px; border-radius: 12px; width: 300px; text-align: center;">
+                <span class="material-symbols-outlined" style="font-size: 40px; color: red;">warning</span>
+                <h3 style="margin: 10px 0;">Xác nhận xoá</h3>
+                <p style="color: #666; margin-bottom: 20px;">Bạn có chắc chắn muốn bỏ món này khỏi giỏ hàng?</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="closeModal()" style="padding: 8px 20px; border-radius: 8px; border: 1px solid #ccc; background: white; cursor: pointer;">Không</button>
+                    <button onclick="confirmRemoveItem(${productId})" style="padding: 8px 20px; border-radius: 8px; border: none; background: red; color: white; cursor: pointer;">Xoá</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+// Xác nhận Xoá và gọi API
+window.confirmRemoveItem = async (productId) => {
+    closeModal();
+    // 1. Cập nhật UI ngay lập tức
+    cartData = cartData.filter(p => p.productId !== productId);
+    renderAll();
+
+    // 2. Gọi API Xóa
+    try {
+        await fetch(`${API_BASE}api/users/cart/deleteInCart?productId=${productId}`, {            method: 'DELETE' ,
+            credentials: 'include',
+                                headers: { 'Content-Type': 'application/json' }});
+    } catch (e) {
+        console.error("Lỗi xoá server:", e);
+    }
+};
+
+// Mở Modal Voucher (Shopee style)
+window.openVoucherModal = () => {
+    const modalHTML = `
+        <div id="custom-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+            <div class="glass-panel" style="background: white; padding: 20px; border-radius: 12px; width: 400px; max-width: 90%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0;">Chọn mã giảm giá</h3>
+                    <span class="material-symbols-outlined" onclick="closeModal()" style="cursor: pointer;">close</span>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="voucher-input" placeholder="Mã giảm giá" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
+                    <button onclick="applyManualVoucher()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Áp dụng</button>
+                </div>
+
+                <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Danh sách Voucher có sẵn -->
+                    <div style="border: 1px solid var(--primary); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="selectVoucher('BINGCHUN10K', 10000)">
+                        <div>
+                            <strong style="color: var(--primary);">Giảm 10K</strong>
+                            <div style="font-size: 12px; color: #666;">Đơn tối thiểu 50K</div>
+                        </div>
+                        <input type="radio" name="voucher" ${appliedVoucher?.code === 'BINGCHUN10K' ? 'checked' : ''}>
+                    </div>
+                    
+                     <div style="border: 1px solid var(--primary); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="selectVoucher('FREESHIP', 15000)">
+                        <div>
+                            <strong style="color: var(--primary);">Miễn phí vận chuyển</strong>
+                            <div style="font-size: 12px; color: #666;">Giảm tối đa 15K</div>
+                        </div>
+                        <input type="radio" name="voucher" ${appliedVoucher?.code === 'FREESHIP' ? 'checked' : ''}>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
+window.selectVoucher = (code, value) => {
+    appliedVoucher = { code, value };
+    closeModal();
+    renderAll(); // Vẽ lại bảng tóm tắt để áp dụng giảm giá
+};
+
+window.applyManualVoucher = () => {
+    const code = document.getElementById('voucher-input').value;
+    if(code === "VIP") {
+        selectVoucher("VIP", 20000);
+    } else {
+        alert("Mã không hợp lệ!");
+    }
+};
+
+window.closeModal = () => {
+    const modal = document.getElementById('custom-modal');
+    if (modal) modal.remove();
+};
