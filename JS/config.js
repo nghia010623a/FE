@@ -1,2 +1,3 @@
-const API_BASE = "https://phone-attract-euros-lock.trycloudflare.com/";
+const API_BASE = "https://attribute-arch-alexandria-miracle.trycloudflare.com/";
 
+// ma giam gia, payos,fix minus pd

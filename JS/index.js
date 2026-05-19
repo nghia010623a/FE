@@ -77,22 +77,17 @@ function initUpdateProfileForm() {
 
         let phone = document.getElementById("phone")?.value.trim();
         let email = document.getElementById("email")?.value.trim();
-        let dob = document.getElementById("dob")?.value;
         let address = document.getElementById("address")?.value.trim();
+        let name = document.getElementById("name")?.value.trim();
 
         // VALIDATE
         if (!phone) return showErrorModal("Vui lòng nhập số điện thoại");
+        if (!name) return showErrorModal("Vui lòng nhập họ và tên");
         let phoneRegex = /^0\d{9}$/;
         if (!phoneRegex.test(phone)) return showErrorModal("Số điện thoại không hợp lệ");
         if (!email) return showErrorModal("Không có email");
-        if (!dob) return showErrorModal("Vui lòng chọn ngày sinh");
 
-        let birthDate = new Date(dob);
-        let today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        let m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-        if (age < 16) return showErrorModal("Bạn phải đủ 16 tuổi");
+       
         if (!address) return showErrorModal("Vui lòng nhập địa chỉ");
 
         try {
@@ -102,12 +97,12 @@ function initUpdateProfileForm() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ phonenum: phone, dob: dob, address: address })
+                body: JSON.stringify({ phone: phone, address: address,name:name })
             });
 
             if (response.ok) {
-                window.location.href = "index.html";
-            } else if (response.status === 401) {
+                window.location.href = "/index.html#home";
+                        } else if (response.status === 401) {
                 const text = await response.json();
                 showErrorModal(text.message);
             } else {
@@ -247,16 +242,89 @@ function getLocation() {
             (position) => {
                 let lat = position.coords.latitude;
                 let lon = position.coords.longitude;
-                fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
-                    .then(res => res.json())
+
+                // Sử dụng URL gốc sạch, không tùy biến header để tránh kích hoạt Preflight CORS của trình duyệt
+                const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=vi`;
+
+                fetch(url)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Mạng có sự cố, không thể lấy địa chỉ.");
+                        return res.json();
+                    })
                     .then(data => {
+                        if (!data || !data.address) {
+                            alert("Không tìm thấy dữ liệu địa chỉ hợp lệ.");
+                            return;
+                        }
+
+                        // 1. Điền địa chỉ đầy đủ vào ô input "address"
                         document.getElementById("address").value = data.display_name;
+
+                        // 2. Trích xuất Phường/Xã và Quận/Huyện từ kết quả trả về
+                        const addressInfo = data.address;
+                        
+                        // Nominatim trả về tên xã/phường qua các trường: quarter, suburb, village, town, ward
+                        let ward = addressInfo.quarter || addressInfo.suburb || addressInfo.ward || addressInfo.village || addressInfo.town;
+                        // Tên quận/huyện qua các trường: suburb, district, borough, county
+                        let district = addressInfo.district || addressInfo.suburb || addressInfo.borough || addressInfo.county;
+
+                        // Chuẩn hóa chuỗi (bỏ bớt các chữ dư thừa như "Phường", "Quận" nếu có để khớp với hanoiData)
+                        if (ward) ward = ward.replace(/^(Phường|Xã|Thị trấn)\s+/i, "").trim();
+                        if (district) district = district.replace(/^(Quận|Huyện|Thị xã)\s+/i, "").trim();
+
+                        // 3. Tự động đồng bộ hóa lên giao diện các thẻ <select>
+                        const districtSel = document.getElementById('district');
+                        const wardSel = document.getElementById('ward');
+
+                        if (districtSel && wardSel) {
+                            // Duyệt qua các option của Quận/Huyện để tìm mục khớp
+                            let foundDistrict = false;
+                            for (let i = 0; i < districtSel.options.length; i++) {
+                                if (districtSel.options[i].value.toLowerCase() === district.toLowerCase()) {
+                                    districtSel.selectedIndex = i;
+                                    foundDistrict = true;
+                                    break;
+                                }
+                            }
+
+                            // Nếu tìm thấy quận, kích hoạt sự kiện change để nạp danh sách phường tương ứng
+                            if (foundDistrict) {
+                                // Kích hoạt sự kiện thay đổi quận bằng code để nạp danh sách phường từ hanoiData
+                                districtSel.dispatchEvent(new Event('change'));
+
+                                // Duyệt tìm phường/xã khớp trong danh sách mới nạp
+                                for (let j = 0; j < wardSel.options.length; j++) {
+                                    if (wardSel.options[j].value.toLowerCase() === ward.toLowerCase()) {
+                                        wardSel.selectedIndex = j;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Lỗi Fetch địa chỉ:", err);
+                        alert("Không thể kết nối tới máy chủ địa chỉ. Vui lòng tự chọn bằng tay!");
                     });
             }, 
-            () => alert("Không lấy được vị trí!")
+            (error) => {
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        alert("Bạn đã từ chối cấp quyền truy cập vị trí.");
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        alert("Thông tin vị trí không khả dụng.");
+                        break;
+                    case error.TIMEOUT:
+                        alert("Quá thời gian yêu cầu lấy vị trí.");
+                        break;
+                    default:
+                        alert("Lỗi không xác định khi lấy vị trí.");
+                }
+            }
         );
     } else {
-        alert("Trình duyệt không hỗ trợ");
+        alert("Trình duyệt của bạn không hỗ trợ định vị Geolocation.");
     }
 }
 
@@ -328,7 +396,89 @@ async function loadPage(url) {
         console.error("Lỗi load trang:", error);
     }
 }
+const hanoiData = {
+    "Ba Đình": ["Phúc Xá","Trúc Bạch","Vĩnh Phúc","Cống Vị","Liễu Giai","Nguyễn Trung Trực","Quán Thánh","Ngọc Hà","Điện Biên","Đội Cấn","Ngọc Khánh","Kim Mã","Giảng Võ","Thành Công"],
+    "Hoàn Kiếm": ["Phúc Tân","Đồng Xuân","Hàng Mã","Hàng Buồm","Hàng Đào","Hàng Bồ","Cửa Đông","Lý Thái Tổ","Hàng Bạc","Hàng Gai","Chương Dương","Hàng Trống","Cửa Nam","Hàng Bông","Tràng Tiền","Trần Hưng Đạo","Phan Chu Trinh","Hàng Bài"],
+    "Đống Đa": ["Cát Linh","Văn Miếu","Quốc Tử Giám","Láng Thượng","Ô Chợ Dừa","Văn Chương","Hàng Bột","Nam Đồng","Trung Phụng","Khâm Thiên","Thổ Quan","Kim Liên","Phương Liên","Trung Tự","Khương Thượng","Ngã Tư Sở","Thịnh Quang","Láng Hạ","Phương Mai"],
+    "Hai Bà Trưng": ["Nguyễn Du","Bùi Thị Xuân","Phạm Đình Hổ","Lê Đại Hành","Đống Mác","Thanh Lương","Thanh Nhàn","Cầu Dền","Bách Khoa","Đồng Tâm","Vĩnh Tuy","Minh Khai","Trương Định","Tương Mai","Đại Kim","Định Công"],
+    "Cầu Giấy": ["Nghĩa Đô","Nghĩa Tân","Mai Dịch","Dịch Vọng","Dịch Vọng Hậu","Quan Hoa","Yên Hòa","Trung Hòa"],
+    "Thanh Xuân": ["Nhân Chính","Thượng Đình","Khương Trung","Khương Mai","Thanh Xuân Trung","Phương Liệt","Hạ Đình","Khương Đình","Thanh Xuân Bắc","Thanh Xuân Nam","Kim Giang"],
+    "Hoàng Mai": ["Thanh Trì","Vĩnh Hưng","Định Công","Đại Kim","Tân Mai","Tương Mai","Giáp Bát","Lĩnh Nam","Trần Phú","Mai Động","Tứ Hiệp","Yên Sở","Hoàng Văn Thụ","Thịnh Liệt"],
+    "Long Biên": ["Thạch Bàn","Long Biên","Bồ Đề","Gia Thụy","Giang Biên","Ngọc Thụy","Việt Hưng","Hội Xá","Phúc Lợi","Phúc Đồng","Đức Giang","Sài Đồng","Thượng Thanh","Cự Khối"],
+    "Tây Hồ": ["Phú Thượng","Nhật Tân","Tứ Liên","Quản An","Xuân La","Bưởi","Yên Phụ","Thụy Khuê"],
+    "Nam Từ Liêm": ["Cầu Diễn","Xuân Phương","Phương Canh","Mỹ Đình 1","Mỹ Đình 2","Tây Mỗ","Đại Mỗ","Trung Văn","Phú Đô","Mễ Trì"],
+    "Bắc Từ Liêm": ["Đông Ngạc","Đức Thắng","Thụy Phương","Tây Tựu","Xuân Đỉnh","Xuân Tảo","Minh Khai","Cổ Nhuế 1","Cổ Nhuế 2","Liên Mạc","Phú Diễn","Phúc Diễn"],
+    "Hà Đông": ["Nguyễn Trãi","Mộ Lao","Văn Quán","Vạn Phúc","Yết Kiêu","Quang Trung","La Khê","Phú La","Phú Lãm","Phú Lương","Dương Nội","Đồng Mai","Biên Giang","Yên Nghĩa","Hà Cầu","Kiến Hưng","Phúc La"]
+};
+function initLocationSelector() {
+    const districtSel = document.getElementById('district');
+    const wardSel = document.getElementById('ward');
 
+    if (!districtSel || !wardSel) {
+        console.warn("Không tìm thấy select district hoặc ward trong DOM hiện tại");
+        return;
+    }
+
+    // Mở khóa cho phép tương tác ổn định
+    districtSel.disabled = false;
+    districtSel.style.pointerEvents = "auto";
+
+    // Đổ danh sách Quận/Huyện vào select ban đầu
+    districtSel.innerHTML = '<option disabled selected value="">Quận / Huyện</option>';
+    Object.keys(hanoiData).forEach(function(d) {
+        var opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        districtSel.appendChild(opt);
+    });
+
+    // Sự kiện lắng nghe khi người dùng đổi Quận/Huyện bằng tay
+    districtSel.addEventListener('change', function() {
+        var district = districtSel.value;
+        wardSel.innerHTML = '<option disabled selected value="">Phường / Xã</option>';
+        wardSel.disabled = !district;
+        if (!district) return;
+
+        hanoiData[district].forEach(function(w) {
+            var opt = document.createElement('option');
+            opt.value = w;
+            opt.textContent = w;
+            wardSel.appendChild(opt);
+        });
+    });
+}
+function initAddressAutoFill() {
+    const streetInput = document.getElementById('address');
+    const districtSelect = document.getElementById('district');
+    const wardSelect = document.getElementById('ward');
+
+    let userStreet = ''; // Lưu riêng phần số nhà người dùng nhập
+
+    // Lưu lại số nhà khi người dùng gõ
+    streetInput.addEventListener('input', function () {
+        userStreet = streetInput.value.trim();
+    });
+
+    function updateAddressField() {
+        const district = districtSelect.options[districtSelect.selectedIndex]?.text || '';
+        const ward = wardSelect.options[wardSelect.selectedIndex]?.text || '';
+
+        const parts = [];
+        if (userStreet) parts.push(userStreet);
+        if (ward && ward !== 'Phường / Xã') parts.push(ward);
+        if (district && district !== 'Quận / Huyện') parts.push(district);
+        if (parts.length > 0) parts.push('Hà Nội');
+
+        streetInput.value = parts.join(', ');
+    }
+
+    districtSelect.addEventListener('change', function () {
+        wardSelect.selectedIndex = 0;
+        updateAddressField();
+    });
+
+    wardSelect.addEventListener('change', updateAddressField);
+}
 function handlePostLoadLogic(path) {
     initReveal();
     setupUserImage();
@@ -339,6 +489,9 @@ function handlePostLoadLogic(path) {
         if (emailEl && email) emailEl.value = email;
         initUpdateProfileForm();
         initAvatarUpload();
+        initLocationSelector();
+        initAddressAutoFill(); // Gọi hàm mới ở đây
+
     }
 
     if (path.includes("account")) {
@@ -735,7 +888,6 @@ async function initCartBadgeOnLoad() {
 
 initCartBadgeOnLoad();
 let cartData = [];
-let appliedVoucher = null; // Lưu voucher đang áp dụng
 
 document.getElementById("cart-icon").addEventListener("click", async () => {
     await loadCartFromServer();
@@ -804,183 +956,592 @@ function renderCart(products) {
         `;
         container.insertAdjacentHTML('beforeend', productHTML);
     });
-}
+}// ==========================================
+// STATE
+// ==========================================
+let deliveryMode = 'ship';
+let payMethod = 'cod';              // 'cod' | 'bank'
+let addresses = [];
+let tempAddr = null, selectedAddr = null;
+let vouchers = [], tempVoucher = null, appliedVoucher = null;
+let selectedPickup = null, tempPickup = null;
 
-// --- 2. RENDER TÓM TẮT ĐƠN HÀNG (CHỈ TÍNH NHỮNG MÓN ĐƯỢC CHECK) ---
+// ==========================================
+// 2. RENDER TÓM TẮT ĐƠN HÀNG
+// ==========================================
 function renderOrderSummary(products) {
     const summaryContainer = document.querySelector('.order-summary');
     if (!summaryContainer) return;
 
-    // Chỉ lọc ra những sản phẩm có isSelected === true
     const selectedItems = products.filter(p => p.isSelected);
-    
     const subtotal = selectedItems.reduce((sum, p) => sum + (p.price * (p.totalQuantity || 0)), 0);
-    const shippingFee = subtotal > 0 ? 15000 : 0;
-    
-    // Nếu có voucher thì trừ tiền, không thì 0
+    const shippingFee = (deliveryMode === 'ship' && subtotal > 0) ? 15000 : 0;
+
+    // Tính discount TRƯỚC
     let discount = 0;
     if (appliedVoucher && subtotal > 0) {
-        discount = appliedVoucher.value; 
+        if (appliedVoucher.percent) {
+            discount = Math.round(subtotal * appliedVoucher.percent / 100);
+        } else if (appliedVoucher.value) {
+            discount = appliedVoucher.value;
+        }
     }
-    
+
+    // Tính total SAU khi đã có discount
     const total = subtotal + shippingFee - discount;
+
+    let addrLabel = '<span style="color:#aaa">Chọn địa chỉ giao hàng</span>';
+    if (selectedAddr) {
+        const short = selectedAddr.address.length > 38
+            ? selectedAddr.address.slice(0, 38) + '…' : selectedAddr.address;
+        addrLabel = `<strong>${selectedAddr.name}</strong> &nbsp;${short}`;
+    }
+
+    let pickupLabel = '<span style="color:#aaa">Chọn khung giờ lấy hàng</span>';
+    if (selectedPickup) {
+        pickupLabel = `${selectedPickup.dayLabel} lúc ${selectedPickup.time}`;
+    }
+
+    let voucherLabel = '<span style="color:#aaa">Chọn hoặc nhập mã giảm giá</span>';
+    if (appliedVoucher) {
+        voucherLabel = `${appliedVoucher.code} — Giảm ${appliedVoucher.percent}% (${discount.toLocaleString('vi-VN')}đ)`;
+    }
 
     summaryContainer.innerHTML = `
         <h3 class="summary-title">Tóm tắt đơn hàng</h3>
-        <div class="summary-row"><span>Tạm tính</span><strong>${subtotal.toLocaleString('vi-VN')}đ</strong></div>
-        <div class="summary-row"><span>Phí vận chuyển</span><strong>${shippingFee.toLocaleString('vi-VN')}đ</strong></div>
-        
-        <!-- Ô chọn Voucher kiểu Shopee -->
-        <div class="voucher-selector glass-panel" onclick="openVoucherModal()" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 10px; margin: 15px 0; border: 1px dashed var(--primary); border-radius: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-outlined" style="color: var(--primary);">confirmation_number</span>
-                <span style="font-weight: 500;">${appliedVoucher ? appliedVoucher.code : 'Chọn hoặc nhập mã'}</span>
-            </div>
-            <span class="material-symbols-outlined">chevron_right</span>
+
+        <p class="sec-label">Hình thức nhận hàng</p>
+        <div style="display:flex;border:1.5px solid var(--primary);border-radius:8px;overflow:hidden;margin-bottom:4px">
+            <button onclick="setDelivery('takeaway')" style="flex:1;padding:9px;font-size:13px;font-weight:500;border:none;cursor:pointer;
+                background:${deliveryMode==='takeaway'?'var(--primary)':'white'};
+                color:${deliveryMode==='takeaway'?'white':'var(--primary)'}">
+                🏪 Lấy tại cửa hàng
+            </button>
+            <button onclick="setDelivery('ship')" style="flex:1;padding:9px;font-size:13px;font-weight:500;border:none;border-left:1.5px solid var(--primary);cursor:pointer;
+                background:${deliveryMode==='ship'?'var(--primary)':'white'};
+                color:${deliveryMode==='ship'?'white':'var(--primary)'}">
+                🚚 Giao hàng
+            </button>
         </div>
 
-        <div class="summary-row" style="color: red;"><span>Giảm giá</span><strong>-${discount.toLocaleString('vi-VN')}đ</strong></div>
+        ${deliveryMode === 'takeaway' ? `
+        <div onclick="openPickupTimeModal()" class="selector-dashed">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;overflow:hidden">
+                <span class="material-symbols-outlined" style="color:var(--primary);flex-shrink:0">schedule</span>
+                <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${pickupLabel}</span>
+            </div>
+            <span class="material-symbols-outlined" style="color:#aaa">chevron_right</span>
+        </div>` : ''}
+
+        ${deliveryMode === 'ship' ? `
+        <div onclick="openAddrModal()" class="selector-dashed">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;overflow:hidden">
+                <span class="material-symbols-outlined" style="color:var(--primary);flex-shrink:0">location_on</span>
+                <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${addrLabel}</span>
+            </div>
+            <span class="material-symbols-outlined" style="color:#aaa">chevron_right</span>
+        </div>` : ''}
+
+        <p class="sec-label">Hình thức thanh toán</p>
+        <div onclick="setPayMethod('cod')" class="pay-opt ${payMethod==='cod'?'pay-opt-sel':''}">
+            <span class="material-symbols-outlined" style="color:${payMethod==='cod'?'var(--primary)':'#888'}">payments</span>
+            <div style="flex:1">
+                <div style="font-size:14px;font-weight:500">Thanh toán khi nhận hàng</div>
+                <div style="font-size:12px;color:#888">Trả tiền mặt cho nhân viên giao hàng</div>
+            </div>
+            <div class="pay-radio ${payMethod==='cod'?'pay-radio-sel':''}"></div>
+        </div>
+        <div onclick="setPayMethod('bank')" class="pay-opt ${payMethod==='bank'?'pay-opt-sel':''}">
+            <span class="material-symbols-outlined" style="color:${payMethod==='bank'?'var(--primary)':'#888'}">account_balance</span>
+            <div style="flex:1">
+                <div style="font-size:14px;font-weight:500">Chuyển khoản ngân hàng</div>
+                <div style="font-size:12px;color:#888">QR / chuyển khoản, tự động xác nhận</div>
+            </div>
+            <div class="pay-radio ${payMethod==='bank'?'pay-radio-sel':''}"></div>
+        </div>
+
+        <div onclick="openVoucherModal()" class="selector-dashed">
+            <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <span class="material-symbols-outlined" style="color:var(--primary)">confirmation_number</span>
+                <span style="font-size:13px">${voucherLabel}</span>
+            </div>
+            <span class="material-symbols-outlined" style="color:#aaa">chevron_right</span>
+        </div>
+
+        <div class="summary-row"><span>Tạm tính</span><strong>${subtotal.toLocaleString('vi-VN')}đ</strong></div>
+        ${deliveryMode === 'ship' ? `
+        <div class="summary-row"><span>Phí vận chuyển</span><strong>${shippingFee.toLocaleString('vi-VN')}đ</strong></div>` : ''}
+        <div class="summary-row" style="color:red"><span>Giảm giá</span><strong>-${discount.toLocaleString('vi-VN')}đ</strong></div>
         <div class="summary-row total"><span>Tổng cộng</span><span class="total-price">${total.toLocaleString('vi-VN')}đ</span></div>
-        <button class="checkout-btn" ${subtotal === 0 ? 'disabled' : ''} style="${subtotal === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">Thanh toán ngay</button>
+        <button class="checkout-btn" ${subtotal===0?'disabled':''} style="${subtotal===0?'opacity:.5;cursor:not-allowed;':''}">
+            Thanh toán ngay
+        </button>
     `;
 }
 
-// --- 3. CÁC HÀM XỬ LÝ SỰ KIỆN (Window Global) ---
+// CSS thêm vào file .css của bạn:
+// .selector-dashed { cursor:pointer; display:flex; align-items:center; justify-content:space-between; padding:10px 12px; margin:10px 0; border:1px dashed var(--primary); border-radius:8px; gap:8px; }
+// .selector-dashed:hover { background:#fff5f5; }
+// .sec-label { font-size:11px; font-weight:500; color:#999; letter-spacing:.6px; text-transform:uppercase; margin:14px 0 6px; }
+// .pay-opt { display:flex; align-items:center; gap:12px; padding:12px; border:1.5px solid #eee; border-radius:8px; cursor:pointer; margin-bottom:8px; transition:border-color .15s; }
+// .pay-opt-sel { border-color:var(--primary); background:#fff5f5; }
+// .pay-radio { width:18px; height:18px; border-radius:50%; border:2px solid #ddd; flex-shrink:0; }
+// .pay-radio-sel { border-color:var(--primary); background:var(--primary); box-shadow:inset 0 0 0 3px white; }
 
-// Xử lý tích chọn Checkbox
-window.toggleCheck = (productId) => {
-    const item = cartData.find(p => p.productId === productId);
-    if (item) {
-        item.isSelected = !item.isSelected; // Đảo ngược trạng thái
-        renderAll(); // Vẽ lại để cập nhật tiền
+// ==========================================
+// DELIVERY & PAYMENT
+// ==========================================
+window.setDelivery = (mode) => { deliveryMode = mode; renderAll(); };
+window.setPayMethod = (method) => { payMethod = method; renderAll(); };
+
+// ==========================================
+// MODAL ĐỊA CHỈ (slide lên trên)
+// ==========================================
+window.openAddrModal = async () => {
+    const html = `
+        <div id="addr-modal" onclick="if(event.target===this)closeAddrModal()"
+            style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;
+                   align-items:flex-start;justify-content:center;padding-top:60px;z-index:9999;">
+            <div style="background:white;border-radius:12px;width:92%;max-width:420px;
+                        max-height:82vh;overflow-y:auto;padding:16px;
+                        animation:slideDown .3s ease">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <span style="font-size:15px;font-weight:500">Địa chỉ giao hàng</span>
+                    <span class="material-symbols-outlined" onclick="closeAddrModal()" style="cursor:pointer;color:#aaa">close</span>
+                </div>
+                <div id="addr-list"><div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải...</div></div>
+
+                <!-- Nút thêm địa chỉ mới -->
+                <div id="add-addr-btn" onclick="toggleAddForm()" 
+                    style="display:flex;align-items:center;gap:6px;color:var(--primary);font-size:13px;
+                           font-weight:500;cursor:pointer;padding:12px 0;border-top:1px solid #f0f0f0;margin-top:4px">
+                    <span class="material-symbols-outlined" style="font-size:20px">add_circle</span>
+                    Thêm địa chỉ mới
+                </div>
+
+                <!-- Form thêm địa chỉ (ẩn mặc định) -->
+                <div id="add-addr-form" style="display:none;border-top:1px solid #f0f0f0;padding-top:12px">
+                    <div style="margin-bottom:10px">
+                        <div style="font-size:12px;color:#888;margin-bottom:4px">Họ tên *</div>
+                        <input id="f-name" placeholder="Nguyễn Văn A"
+                            style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+                    </div>
+                    <div style="margin-bottom:10px">
+                        <div style="font-size:12px;color:#888;margin-bottom:4px">Số điện thoại *</div>
+                        <input id="f-phone" placeholder="0901234567" type="tel"
+                            style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+                    </div>
+                    <div style="margin-bottom:12px">
+                        <div style="font-size:12px;color:#888;margin-bottom:4px">Địa chỉ chi tiết *</div>
+                        <input id="f-addr" placeholder="123 Đường ABC, Phường X, Quận Y, TP.HCM"
+                            style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+                    </div>
+                    <button id="save-addr-btn" onclick="saveNewAddress()"
+                        style="width:100%;padding:11px;background:var(--primary);color:white;border:none;
+                               border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px">
+                        Lưu địa chỉ
+                    </button>
+                </div>
+
+                <button id="addr-confirm-btn" onclick="confirmAddress()"
+                    style="width:100%;padding:12px;background:var(--primary);color:white;border:none;
+                           border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+        <style>
+            @keyframes slideDown { from{transform:translateY(-30px);opacity:0} to{transform:translateY(0);opacity:1} }
+            .addr-item{display:flex;gap:12px;padding:12px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer;align-items:flex-start}
+            .addr-item:last-child{border-bottom:none}
+            .addr-radio{width:20px;height:20px;border-radius:50%;border:2px solid #ddd;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center}
+            .addr-radio.sel{border-color:var(--primary)}
+            .addr-radio.sel::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--primary);display:block}
+            .badge-def{font-size:10px;border:1px solid var(--primary);color:var(--primary);border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+        </style>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+    await fetchAddresses();
+    renderAddrList();
+};
+
+window.toggleAddForm = () => {
+    const form = document.getElementById('add-addr-form');
+    const confirmBtn = document.getElementById('addr-confirm-btn');
+    const isHidden = form.style.display === 'none';
+    form.style.display = isHidden ? 'block' : 'none';
+    confirmBtn.style.display = isHidden ? 'none' : 'block';
+};
+
+async function fetchAddresses() {
+    document.getElementById('addr-list').innerHTML =
+        '<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải...</div>';
+    try {
+        // ===== ĐỔI URL NÀY =====
+        const res = await fetch(`${API_BASE}api/users/addresses`, {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        addresses = await res.json();
+        if (!selectedAddr) tempAddr = addresses.find(a => a.isDefault) || addresses[0] || null;
+        else tempAddr = selectedAddr;
+    } catch (e) {
+        document.getElementById('addr-list').innerHTML =
+            '<div style="text-align:center;padding:24px;color:#e00;font-size:14px">Không tải được địa chỉ.</div>';
+    }
+}
+
+function renderAddrList() {
+    const el = document.getElementById('addr-list');
+    if (!el) return;
+    el.innerHTML = addresses.map(a => `
+        <div class="addr-item" onclick="selectTempAddr(${a.id})">
+            <div class="addr-radio ${tempAddr?.id === a.id ? 'sel' : ''}"></div>
+            <div style="flex:1">
+                <div style="font-size:14px;font-weight:500">
+                    ${a.name}${a.isDefault ? '<span class="badge-def">Mặc định</span>' : ''}
+                </div>
+                <div style="font-size:12px;color:#888;margin:2px 0">${a.phone}</div>
+                <div style="font-size:12px;color:#888">${a.address}</div>
+            </div>
+        </div>`).join('');
+}
+
+window.selectTempAddr = (id) => { tempAddr = addresses.find(a => a.id === id); renderAddrList(); };
+
+window.saveNewAddress = async () => {
+    const name  = document.getElementById('f-name').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const addr  = document.getElementById('f-addr').value.trim();
+    if (!name || !phone || !addr) { alert('Vui lòng điền đầy đủ thông tin!'); return; }
+
+    const btn = document.getElementById('save-addr-btn');
+    btn.textContent = 'Đang lưu...'; btn.disabled = true;
+    try {
+        // ===== ĐỔI URL NÀY =====
+        const res = await fetch(`${API_BASE}api/users/addresses`, {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, phone, address: addr })
+        });
+        const newAddr = await res.json(); // server trả về object địa chỉ vừa tạo có id
+        addresses.push(newAddr);
+        tempAddr = newAddr;
+        document.getElementById('f-name').value = '';
+        document.getElementById('f-phone').value = '';
+        document.getElementById('f-addr').value = '';
+        toggleAddForm();
+        renderAddrList();
+    } catch (e) {
+        alert('Lỗi lưu địa chỉ, vui lòng thử lại!');
+    } finally {
+        btn.textContent = 'Lưu địa chỉ'; btn.disabled = false;
     }
 };
 
-// Xử lý Tăng/Giảm và gọi API
-window.updateQty = async (productId, change) => {
-    const item = cartData.find(p => p.productId === productId);
-    if (item) {
-        let newQty = item.totalQuantity + change;
-        if (newQty < 1) newQty = 1; // Không cho giảm dưới 1
+window.confirmAddress = () => {
+    selectedAddr = tempAddr;
+    closeAddrModal();
+    renderAll();
+};
 
-        if (item.totalQuantity !== newQty) {
-            // 1. Cập nhật giao diện ngay lập tức cho mượt
-            item.totalQuantity = newQty;
-            renderAll();
+window.closeAddrModal = () => {
+    const m = document.getElementById('addr-modal'); if (m) m.remove();
+};
 
-            // 2. Gọi API để cập nhật ngầm trên server
-            try {
-                // Thay URL api cập nhật số lượng của bạn vào đây
-                const response = await fetch(`${API_BASE}api/users/cart`, {
-                    method: 'POST', // hoặc PUT
-                    credentials: 'include',
-                                        headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId: productId, quantity: newQty })
-                });
-                
-                if (!response.ok) {
-                    console.error("Lỗi cập nhật số lượng trên server");
-                    // Nếu lỗi, có thể lùi số lượng lại như cũ (optional)
-                }
-            } catch (error) {
-                console.error("Lỗi mạng khi cập nhật:", error);
-            }
+// ==========================================
+// MODAL KHUNG GIỜ LẤY HÀNG
+// ==========================================
+window.openPickupTimeModal = () => {
+    const slots = genPickupSlots();
+    const grouped = {};
+    slots.forEach(s => { if (!grouped[s.dayLabel]) grouped[s.dayLabel] = []; grouped[s.dayLabel].push(s); });
+
+    const slotsHTML = Object.entries(grouped).map(([label, arr]) => `
+        <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:500;color:#aaa;text-transform:uppercase;
+                        letter-spacing:.5px;margin-bottom:8px">${label}</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+                ${arr.map(s => `
+                    <button onclick="selectPickupSlot('${s.date}','${s.time}','${s.dayLabel}')"
+                        style="padding:9px 4px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;
+                               border:1.5px solid ${tempPickup?.date===s.date&&tempPickup?.time===s.time?'var(--primary)':'#eee'};
+                               background:${tempPickup?.date===s.date&&tempPickup?.time===s.time?'#fff5f5':'white'};
+                               color:${tempPickup?.date===s.date&&tempPickup?.time===s.time?'var(--primary)':'#333'}">
+                        ${s.time}
+                    </button>`).join('')}
+            </div>
+        </div>`).join('');
+
+    const html = `
+        <div id="pickup-modal" onclick="if(event.target===this)closePickupModal()"
+            style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;
+                   align-items:flex-start;justify-content:center;padding-top:60px;z-index:9999;">
+            <div style="background:white;border-radius:12px;width:92%;max-width:420px;
+                        max-height:82vh;overflow-y:auto;padding:16px;animation:slideDown .3s ease">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <span style="font-size:15px;font-weight:500">Khung giờ lấy hàng</span>
+                    <span class="material-symbols-outlined" onclick="closePickupModal()" style="cursor:pointer;color:#aaa">close</span>
+                </div>
+                <p style="font-size:12px;color:#aaa;margin-bottom:14px">Sớm nhất 1 tiếng kể từ bây giờ</p>
+                <div id="pickup-slots">${slotsHTML}</div>
+                <button onclick="confirmPickupTime()"
+                    style="width:100%;padding:12px;background:var(--primary);color:white;border:none;
+                           border-radius:8px;font-size:14px;font-weight:500;cursor:pointer">
+                    Xác nhận
+                </button>
+            </div>
+        </div>
+        <style>@keyframes slideDown{from{transform:translateY(-30px);opacity:0}to{transform:translateY(0);opacity:1}}</style>
+    `;
+    const old = document.getElementById('pickup-modal'); if (old) old.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+};
+
+function genPickupSlots() {
+    const now = new Date();
+    const earliest = roundUpTo30(new Date(now.getTime() + 60 * 60 * 1000));
+    const result = [];
+    for (let day = 0; day <= 1; day++) {
+        const base = new Date(now);
+        base.setDate(base.getDate() + day);
+        base.setHours(0, 0, 0, 0);
+        const dateStr = fmtDate(base);
+        const dayLabel = day === 0
+            ? `Hôm nay, ${base.getDate()}/${base.getMonth() + 1}`
+            : `Ngày mai, ${base.getDate()}/${base.getMonth() + 1}`;
+        for (let m = 8 * 60; m < 22 * 60; m += 30) {
+            const t = new Date(base.getTime() + m * 60 * 1000);
+            if (t < earliest) continue;
+            result.push({ date: dateStr, time: `${pad(t.getHours())}:${pad(t.getMinutes())}`, dayLabel });
         }
     }
+    return result;
+}
+
+function roundUpTo30(d) { const i = 30 * 60 * 1000; return new Date(Math.ceil(d.getTime() / i) * i); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmtDate(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+window.selectPickupSlot = (date, time, dayLabel) => {
+    tempPickup = { date, time, dayLabel };
+    // Re-render slot buttons
+    const slots = genPickupSlots();
+    const grouped = {};
+    slots.forEach(s => { if (!grouped[s.dayLabel]) grouped[s.dayLabel] = []; grouped[s.dayLabel].push(s); });
+    document.getElementById('pickup-slots').innerHTML = Object.entries(grouped).map(([label, arr]) => `
+        <div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:500;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${label}</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px">
+                ${arr.map(s => `
+                    <button onclick="selectPickupSlot('${s.date}','${s.time}','${s.dayLabel}')"
+                        style="padding:9px 4px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;
+                               border:1.5px solid ${tempPickup?.date===s.date&&tempPickup?.time===s.time?'var(--primary)':'#eee'};
+                               background:${tempPickup?.date===s.date&&tempPickup?.time===s.time?'#fff5f5':'white'};
+                               color:${tempPickup?.date===s.date&&tempPickup?.time===s.time?'var(--primary)':'#333'}">
+                        ${s.time}
+                    </button>`).join('')}
+            </div>
+        </div>`).join('');
 };
 
-// --- 4. HỆ THỐNG MODAL (XÓA & VOUCHER) ---
+window.confirmPickupTime = () => {
+    if (!tempPickup) { alert('Vui lòng chọn khung giờ!'); return; }
+    selectedPickup = tempPickup;
+    closePickupModal();
+    renderAll();
+};
 
-// Mở Modal Xoá
-window.openDeleteModal = (productId) => {
-    const modalHTML = `
-        <div id="custom-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;">
-            <div class="glass-panel" style="background: white; padding: 20px; border-radius: 12px; width: 300px; text-align: center;">
-                <span class="material-symbols-outlined" style="font-size: 40px; color: red;">warning</span>
-                <h3 style="margin: 10px 0;">Xác nhận xoá</h3>
-                <p style="color: #666; margin-bottom: 20px;">Bạn có chắc chắn muốn bỏ món này khỏi giỏ hàng?</p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="closeModal()" style="padding: 8px 20px; border-radius: 8px; border: 1px solid #ccc; background: white; cursor: pointer;">Không</button>
-                    <button onclick="confirmRemoveItem(${productId})" style="padding: 8px 20px; border-radius: 8px; border: none; background: red; color: white; cursor: pointer;">Xoá</button>
+window.closePickupModal = () => { const m = document.getElementById('pickup-modal'); if (m) m.remove(); };
+
+// ==========================================
+// MODAL VOUCHER (fetch từ server)
+// ==========================================
+window.openVoucherModal = async () => {
+    const html = `
+        <div id="voucher-modal" onclick="if(event.target===this)closeVoucherModal()"
+            style="position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;
+                   align-items:flex-start;justify-content:center;padding-top:60px;z-index:9999;">
+            <div style="background:white;border-radius:12px;width:92%;max-width:420px;
+                        max-height:82vh;overflow-y:auto;padding:16px;animation:slideDown .3s ease">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <span style="font-size:15px;font-weight:500">Mã giảm giá</span>
+                    <span class="material-symbols-outlined" onclick="closeVoucherModal()" style="cursor:pointer;color:#aaa">close</span>
                 </div>
+                <div style="display:flex;gap:8px;margin-bottom:14px">
+                    <input id="v-manual-input" placeholder="Nhập mã giảm giá"
+                        style="flex:1;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
+                    <button onclick="applyManualVoucher()"
+                        style="padding:9px 16px;background:var(--primary);color:white;border:none;
+                               border-radius:8px;font-size:13px;cursor:pointer;font-weight:500">
+                        Áp dụng
+                    </button>
+                </div>
+                <div id="v-list"><div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải voucher...</div></div>
+                <button onclick="confirmVoucher()"
+                    style="width:100%;margin-top:14px;padding:12px;background:var(--primary);color:white;border:none;
+                           border-radius:8px;font-size:14px;font-weight:500;cursor:pointer">
+                    Xác nhận
+                </button>
             </div>
         </div>
+        <style>@keyframes slideDown{from{transform:translateY(-30px);opacity:0}to{transform:translateY(0);opacity:1}}</style>
     `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    if (!vouchers.length) await fetchVouchers();
+    else renderVoucherList();
 };
 
-// Xác nhận Xoá và gọi API
+async function fetchVouchers() {
+    document.getElementById('v-list').innerHTML =
+        '<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải voucher...</div>';
+    try {
+        const res = await fetch(`${API_BASE}api/users/vouchers`, {
+            method:"GET",
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const raw = await res.json();
+
+        // Map từ {code, discountPercent} → format frontend
+        vouchers = raw.map(row => ({
+            code:        row.code,
+            name:        `Giảm ${row.discountPercent}%`,
+            percent:     row.discountPercent,
+            // Tính value dựa trên subtotal hiện tại
+            value:       Math.round(getCurrentSubtotal() * row.discountPercent / 100),
+            description: `Giảm ${row.discountPercent}% cho đơn hàng`,
+        }));
+
+        tempVoucher = appliedVoucher || null;
+        renderVoucherList();
+    } catch (e) {
+        document.getElementById('v-list').innerHTML =
+            '<div style="text-align:center;padding:24px;color:#e00;font-size:14px">Không tải được voucher.</div>';
+    }
+}
+function getCurrentSubtotal() {
+    const selectedItems = cartData.filter(p => p.isSelected);
+    return selectedItems.reduce((sum, p) => sum + (p.price * (p.totalQuantity || 0)), 0);
+}
+function renderVoucherList() {
+    const el = document.getElementById('v-list');
+    if (!el) return;
+
+    if (!vouchers.length) {
+        el.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Bạn chưa có voucher nào</div>';
+        return;
+    }
+
+    el.innerHTML = vouchers.map(v => `
+        <div onclick="selectTempVoucher('${v.code}')"
+            style="border:1.5px solid ${tempVoucher?.code===v.code ? 'var(--primary)' : '#eee'};
+                   background:${tempVoucher?.code===v.code ? '#fff5f5' : 'white'};
+                   border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;
+                   display:flex;justify-content:space-between;align-items:center;transition:border-color .15s">
+            <div>
+                <div style="font-size:14px;font-weight:500;color:var(--primary)">
+                    Giảm ${v.percent}%
+                </div>
+                <div style="font-size:12px;color:#888;margin-top:2px">
+                    Mã: <strong>${v.code}</strong> 
+                    &nbsp;·&nbsp; 
+                    Tiết kiệm ${v.value.toLocaleString('vi-VN')}đ
+                </div>
+            </div>
+            <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;
+                        border:2px solid ${tempVoucher?.code===v.code ? 'var(--primary)' : '#ddd'};
+                        background:${tempVoucher?.code===v.code ? 'var(--primary)' : 'white'};
+                        box-shadow:${tempVoucher?.code===v.code ? 'inset 0 0 0 3px white' : 'none'}">
+            </div>
+        </div>`).join('');
+}
+
+window.selectTempVoucher = (code) => {
+    tempVoucher = vouchers.find(v => v.code === code) || null;
+    renderVoucherList();
+};
+
+window.applyManualVoucher = async () => {
+    const code = document.getElementById('v-manual-input').value.trim().toUpperCase();
+    if (!code) return;
+    // Tìm trong danh sách đã có
+    const found = vouchers.find(v => v.code === code);
+    if (found) { selectTempVoucher(code); return; }
+    // Hoặc validate từ server
+    try {
+        // ===== VALIDATE MÃ THỦ CÔNG TỪ SERVER =====
+        // const res = await fetch(`${API_BASE}api/vouchers/validate?code=${code}`, { credentials:'include' });
+        // const v = await res.json();
+        // if (v && v.code) { vouchers.push(v); selectTempVoucher(v.code); }
+        // else alert('Mã không hợp lệ hoặc đã hết hạn!');
+        alert('Mã không hợp lệ hoặc đã hết hạn!');
+    } catch { alert('Lỗi kiểm tra mã!'); }
+};
+
+window.confirmVoucher = () => {
+    appliedVoucher = tempVoucher || null;
+    closeVoucherModal();
+    renderAll();
+};
+
+window.closeVoucherModal = () => { const m = document.getElementById('voucher-modal'); if (m) m.remove(); };
+
+// ==========================================
+// 3. CÁC HÀM XỬ LÝ GIỎ HÀNG
+// ==========================================
+window.toggleCheck = (productId) => {
+    const item = cartData.find(p => p.productId === productId);
+    if (item) { item.isSelected = !item.isSelected; renderAll(); }
+};
+
+window.updateQty = async (productId, change) => {
+    const item = cartData.find(p => p.productId === productId);
+    if (!item) return;
+    let newQty = Math.max(1, item.totalQuantity + change);
+    if (item.totalQuantity === newQty) return;
+    item.totalQuantity = newQty;
+    renderAll();
+    try {
+        const res = await fetch(`${API_BASE}api/users/cart`, {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId, quantity: newQty })
+        });
+        if (!res.ok) console.error('Lỗi cập nhật số lượng');
+    } catch (e) { console.error('Lỗi mạng:', e); }
+};
+
+// ==========================================
+// 4. MODAL XÓA & HÀM TIỆN ÍCH
+// ==========================================
+window.openDeleteModal = (productId) => {
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="custom-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.5);
+             display:flex;align-items:center;justify-content:center;z-index:9999;">
+            <div class="glass-panel" style="background:white;padding:20px;border-radius:12px;width:300px;text-align:center">
+                <span class="material-symbols-outlined" style="font-size:40px;color:red">warning</span>
+                <h3 style="margin:10px 0">Xác nhận xoá</h3>
+                <p style="color:#666;margin-bottom:20px">Bạn có chắc muốn bỏ món này khỏi giỏ hàng?</p>
+                <div style="display:flex;gap:10px;justify-content:center">
+                    <button onclick="closeModal()" style="padding:8px 20px;border-radius:8px;border:1px solid #ccc;background:white;cursor:pointer">Không</button>
+                    <button onclick="confirmRemoveItem(${productId})" style="padding:8px 20px;border-radius:8px;border:none;background:red;color:white;cursor:pointer">Xoá</button>
+                </div>
+            </div>
+        </div>`);
+};
+
 window.confirmRemoveItem = async (productId) => {
     closeModal();
-    // 1. Cập nhật UI ngay lập tức
     cartData = cartData.filter(p => p.productId !== productId);
     renderAll();
-
-    // 2. Gọi API Xóa
     try {
-        await fetch(`${API_BASE}api/users/cart/deleteInCart?productId=${productId}`, {            method: 'DELETE' ,
-            credentials: 'include',
-                                headers: { 'Content-Type': 'application/json' }});
-    } catch (e) {
-        console.error("Lỗi xoá server:", e);
-    }
+        await fetch(`${API_BASE}api/users/cart/deleteInCart?productId=${productId}`, {
+            method: 'DELETE', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (e) { console.error('Lỗi xoá:', e); }
 };
 
-// Mở Modal Voucher (Shopee style)
-window.openVoucherModal = () => {
-    const modalHTML = `
-        <div id="custom-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;">
-            <div class="glass-panel" style="background: white; padding: 20px; border-radius: 12px; width: 400px; max-width: 90%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h3 style="margin: 0;">Chọn mã giảm giá</h3>
-                    <span class="material-symbols-outlined" onclick="closeModal()" style="cursor: pointer;">close</span>
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <input type="text" id="voucher-input" placeholder="Mã giảm giá" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px;">
-                    <button onclick="applyManualVoucher()" style="padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Áp dụng</button>
-                </div>
-
-                <div style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Danh sách Voucher có sẵn -->
-                    <div style="border: 1px solid var(--primary); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="selectVoucher('BINGCHUN10K', 10000)">
-                        <div>
-                            <strong style="color: var(--primary);">Giảm 10K</strong>
-                            <div style="font-size: 12px; color: #666;">Đơn tối thiểu 50K</div>
-                        </div>
-                        <input type="radio" name="voucher" ${appliedVoucher?.code === 'BINGCHUN10K' ? 'checked' : ''}>
-                    </div>
-                    
-                     <div style="border: 1px solid var(--primary); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="selectVoucher('FREESHIP', 15000)">
-                        <div>
-                            <strong style="color: var(--primary);">Miễn phí vận chuyển</strong>
-                            <div style="font-size: 12px; color: #666;">Giảm tối đa 15K</div>
-                        </div>
-                        <input type="radio" name="voucher" ${appliedVoucher?.code === 'FREESHIP' ? 'checked' : ''}>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-};
-
-window.selectVoucher = (code, value) => {
-    appliedVoucher = { code, value };
-    closeModal();
-    renderAll(); // Vẽ lại bảng tóm tắt để áp dụng giảm giá
-};
-
-window.applyManualVoucher = () => {
-    const code = document.getElementById('voucher-input').value;
-    if(code === "VIP") {
-        selectVoucher("VIP", 20000);
-    } else {
-        alert("Mã không hợp lệ!");
-    }
-};
-
-window.closeModal = () => {
-    const modal = document.getElementById('custom-modal');
-    if (modal) modal.remove();
-};
+window.closeModal = () => { const m = document.getElementById('custom-modal'); if (m) m.remove(); };
