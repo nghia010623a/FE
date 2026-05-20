@@ -97,7 +97,7 @@ function initUpdateProfileForm() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ phone: phone, address: address,name:name })
+                body: JSON.stringify({ phone: phone, address: address,name:name,isDefault:parseInt("1") })
             });
 
             if (response.ok) {
@@ -1162,7 +1162,7 @@ window.openAddrModal = async () => {
     `;
     document.body.insertAdjacentHTML('beforeend', html);
     await fetchAddresses();
-    renderAddrList();
+    renderAddresses();
 };
 
 window.toggleAddForm = () => {
@@ -1191,24 +1191,42 @@ async function fetchAddresses() {
     }
 }
 
-function renderAddrList() {
-    const el = document.getElementById('addr-list');
-    if (!el) return;
-    el.innerHTML = addresses.map(a => `
-        <div class="addr-item" onclick="selectTempAddr(${a.id})">
-            <div class="addr-radio ${tempAddr?.id === a.id ? 'sel' : ''}"></div>
+function renderAddresses() {
+    const addrList = document.getElementById('addr-list');
+    addrList.innerHTML = '';
+
+    if (!addresses || addresses.length === 0) {
+        addrList.innerHTML = '<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Chưa có địa chỉ nào</div>';
+        return;
+    }
+
+    const defaultAddr = addresses.find(a => a.isDefault === "true");
+    const otherAddrs  = addresses.filter(a => a.isDefault !== "true");
+
+    if (defaultAddr) addrList.innerHTML += createAddrCard(defaultAddr, true);
+    otherAddrs.forEach(addr => addrList.innerHTML += createAddrCard(addr, false));
+}
+function createAddrCard(addr, isDefault) {
+    const isSelected = tempAddr?.name === addr.name && tempAddr?.phone === addr.phone;
+    return `
+        <div class="addr-item" onclick="selectTempAddr('${addr.name}', '${addr.phone}')">
+            <div class="addr-radio ${isSelected ? 'sel' : ''}"></div>
             <div style="flex:1">
-                <div style="font-size:14px;font-weight:500">
-                    ${a.name}${a.isDefault ? '<span class="badge-def">Mặc định</span>' : ''}
+                <div style="display:flex;align-items:center;font-weight:500;font-size:14px">
+                    ${addr.name}
+                    ${isDefault ? '<span class="badge-def">Mặc định</span>' : ''}
                 </div>
-                <div style="font-size:12px;color:#888;margin:2px 0">${a.phone}</div>
-                <div style="font-size:12px;color:#888">${a.address}</div>
+                <div style="font-size:13px;color:#666;margin-top:2px">${addr.phone}</div>
+                <div style="font-size:13px;color:#888;margin-top:2px">${addr.address}</div>
             </div>
-        </div>`).join('');
+        </div>
+    `;
 }
 
-window.selectTempAddr = (id) => { tempAddr = addresses.find(a => a.id === id); renderAddrList(); };
-
+window.selectTempAddr = (name, phone) => {
+    tempAddr = addresses.find(a => a.name === name && a.phone === phone);
+    renderAddresses();
+};
 window.saveNewAddress = async () => {
     const name  = document.getElementById('f-name').value.trim();
     const phone = document.getElementById('f-phone').value.trim();
@@ -1218,24 +1236,29 @@ window.saveNewAddress = async () => {
     const btn = document.getElementById('save-addr-btn');
     btn.textContent = 'Đang lưu...'; btn.disabled = true;
     try {
-        // ===== ĐỔI URL NÀY =====
         const res = await fetch(`${API_BASE}api/users/addresses`, {
             method: 'POST', credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, phone, address: addr })
+            body: JSON.stringify({ name, phone, address: addr, isDefault: parseInt("0") })
         });
-        const newAddr = await res.json(); // server trả về object địa chỉ vừa tạo có id
+
+        // Server có thể trả object hoặc chỉ OK
+        const newAddr = { name, phone, address: addr, isDefault: "false" };
         addresses.push(newAddr);
         tempAddr = newAddr;
+
+        // Xóa form
         document.getElementById('f-name').value = '';
         document.getElementById('f-phone').value = '';
         document.getElementById('f-addr').value = '';
         toggleAddForm();
-        renderAddrList();
+
+        // Cập nhật danh sách ngay
+        renderAddresses();
     } catch (e) {
-        alert('Lỗi lưu địa chỉ, vui lòng thử lại!');
     } finally {
-        btn.textContent = 'Lưu địa chỉ'; btn.disabled = false;
+        btn.textContent = 'Lưu địa chỉ'; 
+        btn.disabled = false;
     }
 };
 
@@ -1545,3 +1568,390 @@ window.confirmRemoveItem = async (productId) => {
 };
 
 window.closeModal = () => { const m = document.getElementById('custom-modal'); if (m) m.remove(); };
+// ==========================================
+// LOGIC NÚT THANH TOÁN NGAY
+// ==========================================
+
+// Hàm validate toàn bộ trước khi submit
+function validateCheckout() {
+    const selectedItems = cartData.filter(p => p.isSelected);
+
+    if (selectedItems.length === 0) {
+        return "Vui lòng chọn ít nhất một sản phẩm để thanh toán!";
+    }
+
+    if (deliveryMode === 'ship' && !selectedAddr) {
+        return "Vui lòng chọn địa chỉ giao hàng!";
+    }
+
+    if (deliveryMode === 'takeaway' && !selectedPickup) {
+        return "Vui lòng chọn khung giờ lấy hàng!";
+    }
+
+    return null; // null = hợp lệ
+}
+
+// Hàm tổng hợp payload gửi lên server
+function buildOrderPayload() {
+    const selectedItems = cartData.filter(p => p.isSelected);
+    const subtotal = selectedItems.reduce((sum, p) => sum + (p.price * p.totalQuantity), 0);
+    const shippingFee = deliveryMode === 'ship' ? 15000 : 0;
+
+    let discount = 0;
+    if (appliedVoucher) {
+        if (appliedVoucher.percent) discount = Math.round(subtotal * appliedVoucher.percent / 100);
+        else if (appliedVoucher.value) discount = appliedVoucher.value;
+    }
+    const total = subtotal + shippingFee - discount;
+
+    // orderCode phải là số, dùng timestamp giảm bớt cho vừa int Java
+    const orderCode = Math.floor(Date.now() / 1000); // Unix timestamp (số nhỏ hơn)
+
+    return {
+        orderCode,
+        amount: total,
+        paymentMethod: payMethod,           // 'cod' | 'bank'
+        deliveryMode,                        // 'ship' | 'takeaway'
+        address: deliveryMode === 'ship' ? selectedAddr : null,
+        pickupTime: deliveryMode === 'takeaway' ? selectedPickup : null,
+        voucherCode: appliedVoucher?.code || null,
+        items: selectedItems.map(p => ({
+            productId: p.productId,
+            quantity: p.totalQuantity,
+            price: p.price
+        })),
+        subtotal,
+        shippingFee,
+        discount,
+        total
+    };
+}
+
+// Gắn sự kiện cho nút checkout — dùng event delegation vì nút render động
+document.addEventListener('click', async (e) => {
+    if (!e.target.closest('.checkout-btn')) return;
+
+    const errorMsg = validateCheckout();
+    if (errorMsg) {
+        showToast(errorMsg, 'error');
+        return;
+    }
+
+    const payload = buildOrderPayload();
+    const btn = e.target.closest('.checkout-btn');
+    btn.disabled = true;
+    btn.textContent = 'Đang xử lý...';
+
+    try {
+        // =========================================================
+        // BƯỚC 1: LUÔN TẠO ĐƠN HÀNG TRONG DATABASE TRƯỚC (Cho cả COD & BANK)
+        // =========================================================
+        const resOrder = await fetch(API_BASE + 'api/users/orders', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resOrder.ok) {
+            const err = await resOrder.json().catch(() => ({}));
+            throw new Error(err.message || 'Lỗi tạo đơn hàng');
+        }
+
+        const order = await resOrder.json();
+        const realOrderCode = order.orderCode; // ID thật từ MySQL (Ví dụ: 125)
+        
+        console.log(">>> Đã lưu DB, Mã đơn hàng thật là:", realOrderCode);
+
+        // =========================================================
+        // BƯỚC 2: XỬ LÝ THEO PHƯƠNG THỨC THANH TOÁN
+        // =========================================================
+        if (payMethod === 'cod') {
+            // COD: Xong rồi, hiện luôn trang thành công
+            showSuccessPage({ 
+                orderCode: realOrderCode, 
+                method: 'cod' 
+            });
+
+        } else {
+            // BANK: Gọi API PayOS để lấy QR bằng mã đơn hàng thật
+            const resPay = await fetch(API_BASE + 'api/payment/createQrCode', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderCode: realOrderCode, // GỬI ID THẬT CỦA MYSQL SANG PAYOS
+                    amount: payload.total
+                    // Đã bỏ `orderDetail: payload` đi vì đơn hàng đã được lưu trên DB rồi, 
+                    // API createQrCode ở backend giờ chỉ cần ID và Amount để báo cho PayOS thôi.
+                })
+            });
+
+            if (!resPay.ok) throw new Error('Lỗi tạo link thanh toán');
+
+            const payosData = await resPay.json();
+            
+            showSuccessPage({
+                orderCode: realOrderCode, // WebSocket giờ sẽ lắng nghe đúng ID thật
+                method: 'bank',
+                qrCode: payosData.qrCode,
+                checkoutUrl: payosData.checkoutUrl,
+                amount: payload.total
+            });
+        }
+
+    } catch (err) {
+        console.error('Lỗi checkout:', err);
+        showToast(err.message || 'Đã có lỗi xảy ra, vui lòng thử lại!', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Thanh toán ngay';
+    }
+});
+// ==========================================
+// TRANG CẢM ƠN (render đè lên contentMain)
+// ==========================================
+// ==========================================
+// TRANG CẢM ƠN (Đã sửa lỗi ReferenceError)
+// ==========================================
+function showSuccessPage({ orderCode, method, qrCode, checkoutUrl, amount, description }) {
+    const contentMain = document.getElementById('contentMain');
+    if (!contentMain) return;
+
+    // Reset giỏ hàng nếu biến tồn tại
+    if (typeof cartData !== 'undefined') cartData = []; 
+
+    const isBank = method === 'bank';
+    const formattedAmount = amount ? Number(amount).toLocaleString('vi-VN') + 'đ' : '';
+    
+    // logic xử lý Nội dung chuyển khoản (Description)
+    // Ưu tiên description từ PayOS trả về vì nó chứa mã prefix (ví dụ: CSTW...) để nổ Webhook
+    const displayDescription = description || `DH${orderCode}`;
+
+    // XỬ LÝ QR CODE: Chuyển chuỗi EMVCo (000201...) thành hình ảnh
+    let qrImageUrl = '';
+    if (isBank && qrCode) {
+        if (qrCode.startsWith('http')) {
+            qrImageUrl = qrCode; // Nếu là link ảnh sẵn thì dùng luôn
+        } else {
+            // Nếu là chuỗi văn bản, dùng API trung gian để vẽ QR
+            qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrCode)}`;
+        }
+    }
+
+    const qrSection = isBank ? `
+        <div style="margin:20px auto;max-width:340px;text-align:center">
+            ${qrImageUrl ? `
+            <div style="padding:16px;background:#fff;border-radius:16px;border:1px solid #eee;display:inline-block;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05)">
+                <img src="${qrImageUrl}" alt="QR thanh toán PayOS" style="width:250px;height:250px;display:block">
+                <p style="font-size:11px;color:#666;margin-top:10px">Mở App Ngân hàng để quét mã VietQR</p>
+            </div>` : `
+            <div style="padding:20px; color:#ef4444; border:1px dashed #f87171; border-radius:12px; margin-bottom:12px">
+                ⚠️ Không thể tạo mã QR tự động.
+            </div>`}
+    
+            <div style="background:#f9f9f9;border-radius:12px;padding:14px 18px;text-align:left;font-size:13px;line-height:1.8;border:1px dashed #ddd;margin-bottom:14px">
+                <div style="display:flex;justify-content:space-between">
+                    <span>💳 Mã đơn hàng:</span>
+                    <strong>#${orderCode}</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between">
+                    <span>💰 Số tiền:</span>
+                    <strong style="color:#e74c3c">${formattedAmount}</strong>
+                </div>
+                <div style="background:#fff4f2;margin:8px -4px 0;padding:8px;border-radius:8px;border:1px solid #ffedd5">
+                    <span style="display:block;font-size:11px;color:#9a3412;margin-bottom:2px">📝 Nội dung chuyển khoản:</span>
+                    <strong style="color:#c2410c;font-size:14px;word-break:break-all">${displayDescription}</strong>
+                </div>
+                <p style="font-size:11px;color:#ef4444;margin-top:6px;line-height:1.4">
+                    * Vui lòng giữ nguyên nội dung để hệ thống xác nhận tự động.
+                </p>
+            </div>
+            
+            ${checkoutUrl ? `
+            <a href="${checkoutUrl}" target="_blank"
+                style="display:inline-block;padding:12px 24px;background:#0ea5e9;color:#fff;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;transition:all 0.2s;box-shadow:0 4px 6px -1px rgba(14, 165, 233, 0.3)">
+                Mở trang thanh toán PayOS ↗
+            </a>` : ''}
+        </div>
+    ` : `
+        <div style="background:#f0fdf4;border-radius:12px;padding:14px 18px;max-width:340px;margin:16px auto;font-size:13px;color:#166534;border:1px solid #bbf7d0;line-height:1.5">
+            <div style="display:flex;gap:8px;align-items:flex-start">
+                <span class="material-symbols-outlined" style="font-size:20px">info</span>
+                <span>Nhân viên sẽ liên hệ xác nhận đơn trong 15–30 phút. Vui lòng giữ điện thoại.</span>
+            </div>
+        </div>
+    `;
+
+    contentMain.innerHTML = `
+        <div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:40px 16px">
+            <div style="text-align:center;max-width:480px;width:100%">
+                <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);
+                            display:flex;align-items:center;justify-content:center;margin:0 auto 20px;
+                            box-shadow:0 8px 24px rgba(34,197,94,.3)">
+                    <span class="material-symbols-outlined" style="font-size:36px;color:#fff">check</span>
+                </div>
+                <h2 style="font-size:22px;font-weight:600;margin:0 0 8px;color:#1a1a1a">Cảm ơn bạn đã đặt hàng! 🎉</h2>
+                <p style="font-size:14px;color:#666;margin:0 0 4px">Mã đơn hàng: <strong style="color:#0ea5e9">#${orderCode}</strong></p>
+                <p style="font-size:13px;color:#999;margin:0 0 20px">
+                    ${isBank ? '💳 Hình thức: Chuyển khoản ngân hàng' : '💵 Hình thức: Thanh toán khi nhận hàng'}
+                </p>
+                ${qrSection}
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+                    <button onclick="window.location.hash='#home'"
+                        style="padding:12px 24px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer">
+                        🏠 Về trang chủ
+                    </button>
+                    <button onclick="window.location.hash='#orders'"
+                        style="padding:12px 24px;background:#fff;color:#0ea5e9;border:1.5px solid #0ea5e9;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer">
+                        📦 Xem đơn hàng
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    connectWebSocket(orderCode);
+}
+// ==========================================
+// TOAST THÔNG BÁO NHẸ (thay alert)
+// ==========================================
+function showToast(message, type = 'info') {
+    const old = document.getElementById('__toast');
+    if (old) old.remove();
+
+    const colors = {
+        error:   { bg: '#fee2e2', color: '#991b1b', icon: 'error' },
+        success: { bg: '#dcfce7', color: '#166534', icon: 'check_circle' },
+        info:    { bg: '#e0f2fe', color: '#075985', icon: 'info' }
+    };
+    const c = colors[type] || colors.info;
+
+    const toast = document.createElement('div');
+    toast.id = '__toast';
+    toast.innerHTML = `
+        <span class="material-symbols-outlined" style="font-size:18px;flex-shrink:0">${c.icon}</span>
+        <span style="flex:1;font-size:13px">${message}</span>
+        <span class="material-symbols-outlined" onclick="this.parentElement.remove()" 
+              style="font-size:16px;cursor:pointer;opacity:.6">close</span>
+    `;
+    Object.assign(toast.style, {
+        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+        background: c.bg, color: c.color,
+        padding: '12px 16px', borderRadius: '12px',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        boxShadow: '0 4px 20px rgba(0,0,0,.15)',
+        zIndex: '99999', maxWidth: '90vw', minWidth: '260px',
+        animation: 'toastIn .3s ease'
+    });
+
+    // Inject keyframes nếu chưa có
+    if (!document.getElementById('__toastStyle')) {
+        const s = document.createElement('style');
+        s.id = '__toastStyle';
+        s.textContent = `@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`;
+        document.head.appendChild(s);
+    }
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+function connectWebSocket(orderCode) {
+    console.log("🚀 Khởi động nạp thư viện WebSocket...");
+
+    const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) return resolve();
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    };
+
+    Promise.all([
+        loadScript("https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js")
+    ]).then(() => {
+        console.log("✅ Đã nạp thư viện thành công. Đang kết nối...");
+        
+        try {
+            // Dùng đường dẫn link tunnel của ông
+            const socket = new SockJS('https://hardwood-computing-prevent-favorites.trycloudflare.com/nghiaws'); 
+            const stompClient = Stomp.over(socket);
+
+            // Tắt debug rác console
+            stompClient.debug = null;
+
+            stompClient.connect({}, function (frame) {
+                console.log('✅ Đã kết nối STOMP! Đang đợi tín hiệu đơn hàng: ' + orderCode);
+                
+                stompClient.subscribe('/noticeonly/payment/' + orderCode, function (message) {
+                    console.log("🔥 Nhận tin nhắn từ server:", message.body);
+                    if (message.body === "successful") {
+                        showPaymentSuccessModal();
+                    }
+                });
+            }, function(err) {
+                console.error("❌ Lỗi STOMP:", err);
+            });
+        } catch (e) {
+            console.error("❌ Lỗi khởi tạo WebSocket:", e);
+        }
+    });
+}
+function showPaymentSuccessModal() {
+    // 1. Kiểm tra nếu modal chưa tồn tại thì tự tạo mới bằng JS
+    let modal = document.getElementById('successModal');
+    
+    if (!modal) {
+        console.log("🛠 Modal không có sẵn, đang tự khởi tạo...");
+        modal = document.createElement('div');
+        modal.id = 'successModal';
+        // Style cho Modal (Overlay)
+        Object.assign(modal.style, {
+            position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+            background: 'rgba(255,255,255,0.98)', 'z-index': '100000',
+            display: 'none', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', fontFamily: 'Arial, sans-serif'
+        });
+
+        modal.innerHTML = `
+            <div style="width: 80px; height: 80px; background: #4CAF50; border-radius: 50%; 
+                        display: flex; align-items: center; justify-content: center; 
+                        box-shadow: 0 8px 20px rgba(76,175,80,0.3); animation: scaleIn 0.5s ease">
+                <span style="color: white; font-size: 50px;">✓</span>
+            </div>
+            <h2 style="color: #4CAF50; margin-top: 25px; margin-bottom: 10px;">Thanh toán thành công!</h2>
+            <p style="color: #666; margin-bottom: 20px;">Cảm ơn bạn đã ủng hộ shop.</p>
+            <p id="redirectText" style="font-weight: bold; color: #333; background: #f0f0f0; 
+                                        padding: 12px 25px; border-radius: 50px; min-width: 250px; text-align: center;">
+                Đang quay lại trang chủ trong 5 giây...
+            </p>
+            <style>
+                @keyframes scaleIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+            </style>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // 2. Hiển thị Modal
+    modal.style.display = 'flex';
+    
+    // 3. Logic đếm ngược và về trang chủ
+    let seconds = 5;
+    const textElement = document.getElementById('redirectText');
+    
+    const interval = setInterval(() => {
+        seconds--;
+        if (textElement) {
+            textElement.innerText = `Đang quay lại trang chủ trong ${seconds} giây...`;
+        }
+        
+        if (seconds <= 0) {
+            clearInterval(interval);
+            // Về thẳng trang chủ
+            window.location.href = 'index.html'; 
+        }
+    }, 1000);
+}

@@ -1,3 +1,3 @@
-const API_BASE = "https://attribute-arch-alexandria-miracle.trycloudflare.com/";
+const API_BASE = "https://hardwood-computing-prevent-favorites.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd
