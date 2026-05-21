@@ -1,3 +1,3 @@
-const API_BASE = "https://hardwood-computing-prevent-favorites.trycloudflare.com/";
+const API_BASE = "https://merit-alexander-ranges-investigators.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd

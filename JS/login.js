@@ -43,8 +43,25 @@ async function checkLogin()
         });
   
         if (response.ok) {
-  
+
+
+        
             const data = await response.json();   
+
+
+            if(data.role=="ADMIN")
+            {
+
+              window.location.href="admin.html";
+              localStorage.setItem("imageUser", data.imageUser);
+            localStorage.setItem("loginWithGoogle", data.loginWithGoogle);
+            localStorage.setItem("isUpdateProfile", data.isUpdateProfile);
+            localStorage.setItem("email", data.email);
+            localStorage.setItem("currentUser", JSON.stringify(data.currentUser));
+
+            }
+            else{
+
             localStorage.setItem("imageUser", data.imageUser);
             localStorage.setItem("loginWithGoogle", data.loginWithGoogle);
             localStorage.setItem("isUpdateProfile", data.isUpdateProfile);
@@ -56,7 +73,7 @@ async function checkLogin()
 
 
                     
-            }
+            }}
         else if (response.status === 401) {
   
             const text = await response.json();
@@ -65,6 +82,10 @@ async function checkLogin()
             showErrorModal(text.message);
   
         }
+        else { const text = await response.json();
+          console.log(text.message);
+
+          showErrorModal(text.message);}
   
     } catch (error) {
   

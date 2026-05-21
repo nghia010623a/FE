@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BingChun Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --lb1:#e0f4ff;--lb2:#bae6fd;--lb3:#7dd3fc;--lb4:#38bdf8;--lb5:#0ea5e9;--lb6:#0284c7;
+  --glass:rgba(255,255,255,0.25);--glass2:rgba(255,255,255,0.15);--glass3:rgba(255,255,255,0.35);
+  --border-g:rgba(255,255,255,0.5);--border-g2:rgba(255,255,255,0.3);
+  --text-dark:#0c4a6e;--text-mid:#075985;--text-light:#0369a1;
+  --shadow:0 8px 32px rgba(14,165,233,0.18);--shadow2:0 4px 16px rgba(14,165,233,0.12);
+  --radius:16px;--radius-sm:10px;
+}
+body{
+  font-family:'Nunito',sans-serif;
+  min-height:100vh;
+  background:linear-gradient(135deg,#bae6fd 0%,#e0f2fe 30%,#f0f9ff 60%,#dbeafe 100%);
+  background-attachment:fixed;
+  color:var(--text-dark);
+  overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 600px 400px at 10% 20%,rgba(186,230,253,0.6),transparent),
+    radial-gradient(ellipse 500px 300px at 90% 80%,rgba(147,197,253,0.5),transparent),
+    radial-gradient(ellipse 400px 400px at 50% 50%,rgba(224,242,254,0.4),transparent);
+  pointer-events:none;z-index:0;
+}
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+
+/* SIDEBAR */
+.sidebar{
+  width:240px;min-width:240px;
+  background:rgba(255,255,255,0.28);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-right:1px solid var(--border-g);
+  display:flex;flex-direction:column;
+  box-shadow:4px 0 24px rgba(14,165,233,0.1);
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.logo{
+  padding:24px 20px 16px;
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border-g2);
+}
+.logo-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:linear-gradient(135deg,var(--lb4),var(--lb6));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:22px;
+  box-shadow:0 4px 12px rgba(14,165,233,0.35);
+}
+.logo-text{font-family:'Quicksand',sans-serif;font-size:18px;font-weight:700;color:var(--text-dark)}
+.logo-sub{font-size:11px;color:var(--text-light);font-weight:500}
+.nav{padding:12px 10px;flex:1}
+.nav-section{margin-bottom:4px}
+.nav-label{font-size:10px;font-weight:700;color:var(--lb6);letter-spacing:1px;padding:8px 10px 4px;opacity:0.7}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 12px;border-radius:var(--radius-sm);
+  cursor:pointer;transition:all 0.2s;
+  font-size:13.5px;font-weight:600;color:var(--text-mid);
+  margin-bottom:2px;user-select:none;
+}
+.nav-item:hover{background:rgba(255,255,255,0.4);color:var(--text-dark)}
+.nav-item.active{
+  background:rgba(255,255,255,0.55);
+  color:var(--lb6);
+  box-shadow:var(--shadow2);
+  border:1px solid var(--border-g);
+}
+.nav-item i{font-size:17px;opacity:0.8}
+.nav-item.active i{opacity:1}
+.badge{
+  margin-left:auto;background:var(--lb5);color:#fff;
+  font-size:10px;padding:1px 7px;border-radius:99px;font-weight:700;
+}
+.sidebar-footer{
+  padding:14px;border-top:1px solid var(--border-g2);
+  display:flex;align-items:center;gap:10px;
+}
+.avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--lb3),var(--lb5));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:14px;
+  border:2px solid var(--border-g);
+}
+.user-info{flex:1}
+.user-name{font-size:13px;font-weight:700;color:var(--text-dark)}
+.user-role{font-size:11px;color:var(--text-light)}
+.logout-btn{
+  background:rgba(255,255,255,0.3);border:none;
+  border-radius:8px;padding:6px 8px;cursor:pointer;
+  color:var(--text-light);transition:0.2s;font-size:15px;
+}
+.logout-btn:hover{background:rgba(239,68,68,0.15);color:#dc2626}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{
+  background:rgba(255,255,255,0.22);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border-g);
+  padding:0 24px;height:60px;
+  display:flex;align-items:center;gap:16px;
+  position:sticky;top:0;z-index:10;
+  box-shadow:0 2px 12px rgba(14,165,233,0.08);
+}
+.page-title{font-family:'Quicksand',sans-serif;font-size:17px;font-weight:700;color:var(--text-dark);flex:1}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.4);border:1px solid var(--border-g);
+  border-radius:99px;padding:6px 14px;
+}
+.search-box input{
+  border:none;background:transparent;font-family:'Nunito',sans-serif;
+  font-size:13px;color:var(--text-dark);width:180px;outline:none;
+}
+.search-box input::placeholder{color:#7db9d4}
+.search-box i{color:var(--text-light);font-size:15px}
+.notif-btn{
+  position:relative;background:rgba(255,255,255,0.4);
+  border:1px solid var(--border-g);border-radius:10px;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--text-mid);font-size:18px;transition:0.2s;
+}
+.notif-btn:hover{background:rgba(255,255,255,0.6)}
+.notif-dot{
+  position:absolute;top:6px;right:6px;width:8px;height:8px;
+  background:#ef4444;border-radius:50%;border:2px solid #fff;
+  display:none;
+}
+
+/* WS STATUS */
+.ws-status{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,0.3);border:1px solid var(--border-g);
+  border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;
+}
+.ws-dot{width:7px;height:7px;border-radius:50%;animation:pulse 2s infinite}
+.ws-dot.connected{background:#22c55e}
+.ws-dot.disconnected{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* CONTENT */
+.content{flex:1;padding:24px;overflow-y:auto}
+.section{display:none}
+.section.active{display:block}
+
+/* GLASS CARD */
+.glass-card{
+  background:rgba(255,255,255,0.3);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--border-g);border-radius:var(--radius);
+  box-shadow:var(--shadow2);
+  padding:20px;margin-bottom:20px;
+}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.stat-card{
+  background:rgba(255,255,255,0.38);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--border-g);border-radius:var(--radius);
+  padding:18px;box-shadow:var(--shadow2);
+  display:flex;align-items:center;gap:14px;
+}
+.stat-icon{
+  width:46px;height:46px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#fff;flex-shrink:0;
+}
+.stat-val{font-family:'Quicksand',sans-serif;font-size:22px;font-weight:700;color:var(--text-dark)}
+.stat-lbl{font-size:12px;color:var(--text-light);font-weight:600}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:rgba(255,255,255,0.4);border-bottom:1px solid var(--border-g)}
+thead th{padding:10px 14px;text-align:left;font-weight:700;color:var(--text-mid);font-size:12px;letter-spacing:0.3px}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.3);transition:0.15s}
+tbody tr:hover{background:rgba(255,255,255,0.3)}
+tbody td{padding:10px 14px;color:var(--text-dark)}
+.status-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;
+}
+.pill-green{background:rgba(34,197,94,0.15);color:#15803d}
+.pill-red{background:rgba(239,68,68,0.15);color:#b91c1c}
+.pill-amber{background:rgba(245,158,11,0.15);color:#92400e}
+.pill-blue{background:rgba(14,165,233,0.15);color:#0369a1}
+
+/* BUTTONS */
+.btn{
+  padding:8px 16px;border-radius:var(--radius-sm);border:none;
+  font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--lb4),var(--lb6));
+  color:#fff;box-shadow:0 4px 12px rgba(14,165,233,0.35);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(14,165,233,0.45)}
+.btn-glass{
+  background:rgba(255,255,255,0.4);border:1px solid var(--border-g);
+  color:var(--text-mid);
+}
+.btn-glass:hover{background:rgba(255,255,255,0.6)}
+.btn-danger{background:rgba(239,68,68,0.12);color:#dc2626;border:1px solid rgba(239,68,68,0.25)}
+.btn-danger:hover{background:rgba(239,68,68,0.2)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{width:30px;height:30px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px}
+
+/* SECTION HEADER */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-family:'Quicksand',sans-serif;font-size:16px;font-weight:700;color:var(--text-dark)}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(12,74,110,0.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:rgba(240,249,255,0.97);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--border-g);border-radius:20px;
+  padding:28px;width:480px;max-width:95vw;
+  box-shadow:0 24px 64px rgba(14,165,233,0.25);
+  animation:modalIn 0.25s ease;
+}
+@keyframes modalIn{from{transform:scale(0.9) translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-family:'Quicksand',sans-serif;font-size:17px;font-weight:700;color:var(--text-dark)}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-light);padding:4px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+.form-control{
+  width:100%;padding:9px 12px;
+  background:rgba(255,255,255,0.6);border:1px solid var(--border-g);
+  border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:13px;
+  color:var(--text-dark);outline:none;transition:0.2s;
+}
+.form-control:focus{border-color:var(--lb4);background:rgba(255,255,255,0.85);box-shadow:0 0 0 3px rgba(56,189,248,0.2)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* TOAST */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:8px}
+.toast{
+  background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);
+  border:1px solid var(--border-g);border-radius:12px;
+  padding:12px 16px;font-size:13px;font-weight:600;color:var(--text-dark);
+  box-shadow:0 8px 24px rgba(14,165,233,0.2);
+  animation:toastIn 0.3s ease;display:flex;align-items:center;gap:8px;min-width:220px;
+  transition:opacity 0.3s,transform 0.3s;
+}
+.toast i{font-size:17px}
+.toast.success i{color:#22c55e}
+.toast.error i{color:#ef4444}
+.toast.info i{color:#38bdf8}
+@keyframes toastIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+
+/* NOTIF PANEL */
+.notif-panel{
+  position:fixed;top:66px;right:20px;z-index:50;width:320px;
+  background:rgba(240,249,255,0.97);backdrop-filter:blur(20px);
+  border:1px solid var(--border-g);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:0;display:none;
+}
+.notif-panel.open{display:block;animation:modalIn 0.2s ease}
+.notif-head{padding:14px 16px;border-bottom:1px solid var(--border-g2);display:flex;align-items:center;justify-content:space-between}
+.notif-list{max-height:320px;overflow-y:auto}
+.notif-item{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.3);transition:0.15s;cursor:pointer}
+.notif-item:hover{background:rgba(255,255,255,0.4)}
+.notif-item-title{font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:2px}
+.notif-item-body{font-size:12px;color:var(--text-light)}
+.notif-item-time{font-size:11px;color:var(--lb4);margin-top:3px}
+
+/* CHART BARS */
+.chart-row{display:flex;gap:6px;align-items:flex-end;height:100px;margin:12px 0}
+.bar{
+  flex:1;background:linear-gradient(180deg,var(--lb4),var(--lb2));
+  border-radius:4px 4px 0 0;transition:0.3s;cursor:pointer;position:relative;
+}
+.bar:hover{background:linear-gradient(180deg,var(--lb5),var(--lb3))}
+.bar-label{text-align:center;font-size:10px;color:var(--text-light);margin-top:4px}
+
+/* WS LOG */
+.ws-area{background:rgba(255,255,255,0.2);border:1px solid var(--border-g);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
+.ws-log{max-height:120px;overflow-y:auto;font-size:12px;color:var(--text-light)}
+.ws-log div{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.2)}
+.ws-log div:last-child{border:none}
+
+/* TOGGLE */
+.toggle{position:relative;display:inline-block;width:40px;height:22px}
+.toggle input{opacity:0;width:0;height:0}
+.slider-sw{position:absolute;cursor:pointer;inset:0;background:rgba(200,220,235,0.6);border-radius:99px;transition:0.3s}
+.slider-sw::before{content:'';position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+input:checked+.slider-sw{background:linear-gradient(135deg,var(--lb4),var(--lb5))}
+input:checked+.slider-sw::before{transform:translateX(18px)}
+
+/* RATING STARS */
+.stars{color:#f59e0b;font-size:13px}
+
+/* TAB PILLS */
+.tab-pills{display:flex;gap:6px;margin-bottom:16px;background:rgba(255,255,255,0.2);padding:4px;border-radius:99px;width:fit-content;flex-wrap:wrap}
+.tab-pill{padding:6px 16px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;transition:0.2s;color:var(--text-mid);border:none;background:transparent;font-family:'Nunito',sans-serif}
+.tab-pill.active{background:rgba(255,255,255,0.6);color:var(--lb6);box-shadow:var(--shadow2)}
+.tab-pill:hover{background:rgba(255,255,255,0.4)}
+
+/* BANNER PREVIEW */
+.banner-preview{
+  height:90px;border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;
+  position:relative;overflow:hidden;
+}
+
+/* PROMO CARD */
+.promo-code{font-family:monospace;font-size:15px;font-weight:700;color:var(--lb6);letter-spacing:1px}
+.promo-disc{font-size:22px;font-weight:800;color:var(--lb5)}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px;color:var(--text-light);font-size:13px}
+.empty i{font-size:40px;margin-bottom:8px;opacity:0.4;display:block}
+
+select.form-control option{background:#e0f4ff}
+textarea.form-control{resize:vertical;min-height:80px}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.banner-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.promo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+/* UTILITIES */
+.mt8{margin-top:8px}
+.mt16{margin-top:16px}
+.mb0{margin-bottom:0!important}
+.flex{display:flex;align-items:center;gap:8px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(56,189,248,0.3);border-radius:99px}
+
+/* ORDER STATUS SELECT */
+.status-select{
+  font-size:11px;padding:4px 6px;border-radius:6px;
+  border:1px solid var(--border-g);background:rgba(255,255,255,0.5);
+  color:var(--text-dark);font-family:'Nunito',sans-serif;cursor:pointer;
+}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .sidebar{width:200px;min-width:200px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .grid2{grid-template-columns:1fr}
+  .cat-grid{grid-template-columns:repeat(2,1fr)}
+  .promo-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:640px){
+  .sidebar{display:none}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .banner-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon"><i class="ti ti-snowflake"></i></div>
+    <div>
+      <div class="logo-text">BingChun</div>
+      <div class="logo-sub">Admin Panel</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">
+      <div class="nav-label">TỔNG QUAN</div>
+      <div class="nav-item active" onclick="goSection('dashboard',this)">
+        <i class="ti ti-layout-dashboard"></i>Dashboard
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">QUẢN LÝ</div>
+      <div class="nav-item" onclick="goSection('users',this)"><i class="ti ti-users"></i>Người dùng</div>
+      <div class="nav-item" onclick="goSection('products',this)"><i class="ti ti-package"></i>Sản phẩm</div>
+      <div class="nav-item" onclick="goSection('categories',this)"><i class="ti ti-category"></i>Danh mục</div>
+      <div class="nav-item" onclick="goSection('orders',this)">
+        <i class="ti ti-shopping-cart"></i>Đơn hàng<span class="badge" id="order-badge">0</span>
+      </div>
+      <div class="nav-item" onclick="goSection('banners',this)"><i class="ti ti-photo"></i>Banner</div>
+      <div class="nav-item" onclick="goSection('promotions',this)"><i class="ti ti-ticket"></i>Mã giảm giá</div>
+      <div class="nav-item" onclick="goSection('reviews',this)">
+        <i class="ti ti-star"></i>Đánh giá<span class="badge" id="rv-badge">0</span>
+      </div>
+      <div class="nav-item" onclick="goSection('notifications',this)"><i class="ti ti-bell"></i>Thông báo</div>
+      <div class="nav-item" onclick="goSection('ingredients',this)"><i class="ti ti-plant-2"></i>Nguyên liệu</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">HỆ THỐNG</div>
+      <div class="nav-item" onclick="goSection('logs',this)"><i class="ti ti-history"></i>Audit Log</div>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="avatar">AD</div>
+    <div class="user-info">
+      <div class="user-name">Admin</div>
+      <div class="user-role">Super Admin</div>
+    </div>
+    <button class="logout-btn" title="Đăng xuất" onclick="logout()">
+      <i class="ti ti-logout"></i>
+    </button>
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="search-box">
+      <i class="ti ti-search"></i>
+      <input type="text" placeholder="Tìm kiếm..." id="global-search" oninput="globalSearch(this.value)">
+    </div>
+    <div class="ws-status">
+      <div class="ws-dot connected" id="ws-dot"></div>
+      <span id="ws-label" style="font-size:12px">WebSocket</span>
+    </div>
+    <div class="notif-btn" onclick="toggleNotif()" id="notif-btn">
+      <i class="ti ti-bell"></i>
+      <div class="notif-dot" id="notif-dot"></div>
+    </div>
+  </div>
+
+  <!-- NOTIF PANEL -->
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-head">
+      <span style="font-size:14px;font-weight:700;color:var(--text-dark)">Thông báo hệ thống</span>
+      <button onclick="toggleNotif()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-light)"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="notif-list" id="notif-list"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ========== DASHBOARD ========== -->
+    <div class="section active" id="section-dashboard">
+      <div class="stats-row" id="stats-row">
+        <!-- Sẽ render từ JS -->
+      </div>
+      <div class="grid2">
+        <div class="glass-card">
+          <div class="sec-header">
+            <span class="sec-title">Doanh thu 7 ngày</span>
+            <span style="font-size:12px;color:var(--text-light)">Triệu VND</span>
+          </div>
+          <div class="chart-row" id="rev-chart"></div>
+          <div style="display:flex;gap:6px" id="rev-labels"></div>
+        </div>
+        <div class="glass-card">
+          <div class="sec-header">
+            <span class="sec-title">Đơn hàng gần đây</span>
+            <button class="btn btn-glass btn-sm" onclick="goSection('orders',null)">Xem tất cả</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Khách</th><th>Tổng</th><th>Trạng thái</th></tr></thead>
+              <tbody id="dash-orders"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">WebSocket — Hoạt động thời gian thực</span>
+          <div class="ws-status" style="font-size:12px"><div class="ws-dot connected"></div><span>Live</span></div>
+        </div>
+        <div class="ws-area"><div class="ws-log" id="ws-log"></div></div>
+      </div>
+    </div>
+
+    <!-- ========== USERS ========== -->
+    <div class="section" id="section-users">
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">Quản lý người dùng</span>
+          <button class="btn btn-primary" onclick="openModal('modal-user')"><i class="ti ti-plus"></i>Thêm người dùng</button>
+        </div>
+        <div class="tab-pills" id="user-tabs">
+          <button class="tab-pill active" onclick="filterUsers('all',this)">Tất cả</button>
+          <button class="tab-pill" onclick="filterUsers('active',this)">Hoạt động</button>
+          <button class="tab-pill" onclick="filterUsers('inactive',this)">Bị khóa</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Tên đăng nhập</th><th>Email</th><th>Vai trò</th><th>Điểm</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody id="users-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== PRODUCTS ========== -->
+    <div class="section" id="section-products">
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">Quản lý sản phẩm</span>
+          <button class="btn btn-primary" onclick="openModal('modal-product')"><i class="ti ti-plus"></i>Thêm sản phẩm</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Rating</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody id="products-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CATEGORIES ========== -->
+    <div class="section" id="section-categories">
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">Quản lý danh mục</span>
+          <button class="btn btn-primary" onclick="openModal('modal-cat')"><i class="ti ti-plus"></i>Thêm danh mục</button>
+        </div>
+        <div class="cat-grid" id="cat-grid"></div>
+      </div>
+    </div>
+
+    <!-- ========== ORDERS ========== -->
+    <div class="section" id="section-orders">
+      <div class="glass-card">
+        <div class="sec-header"><span class="sec-title">Quản lý đơn hàng</span></div>
+        <div class="tab-pills" id="order-tabs">
+          <button class="tab-pill active" onclick="filterOrders('all',this)">Tất cả</button>
+          <button class="tab-pill" onclick="filterOrders('pending',this)">Chờ xử lý</button>
+          <button class="tab-pill" onclick="filterOrders('confirmed',this)">Đã xác nhận</button>
+          <button class="tab-pill" onclick="filterOrders('delivered',this)">Hoàn thành</button>
+          <button class="tab-pill" onclick="filterOrders('cancelled',this)">Đã hủy</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Khách hàng</th><th>Ngày đặt</th><th>Phương thức</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody id="orders-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== BANNERS ========== -->
+    <div class="section" id="section-banners">
+      <div class="sec-header" style="margin-bottom:16px">
+        <span class="sec-title" style="font-size:18px;font-family:'Quicksand',sans-serif">Quản lý Banner</span>
+        <button class="btn btn-primary" onclick="openModal('modal-banner')"><i class="ti ti-plus"></i>Thêm Banner</button>
+      </div>
+      <div class="banner-grid" id="banner-grid"></div>
+    </div>
+
+    <!-- ========== PROMOTIONS ========== -->
+    <div class="section" id="section-promotions">
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">Mã giảm giá</span>
+          <button class="btn btn-primary" onclick="openModal('modal-promo')"><i class="ti ti-plus"></i>Tạo mã</button>
+        </div>
+        <div class="promo-grid" id="promo-grid"></div>
+      </div>
+    </div>
+
+    <!-- ========== REVIEWS ========== -->
+    <div class="section" id="section-reviews">
+      <div class="glass-card">
+        <div class="sec-header"><span class="sec-title">Quản lý đánh giá</span></div>
+        <div class="tab-pills" id="review-tabs">
+          <button class="tab-pill active" onclick="filterReviews('all',this)">Tất cả</button>
+          <button class="tab-pill" onclick="filterReviews('active',this)">Hiển thị</button>
+          <button class="tab-pill" onclick="filterReviews('hidden',this)">Đã ẩn</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Sản phẩm</th><th>Khách hàng</th><th>Rating</th><th>Nội dung</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody id="reviews-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== NOTIFICATIONS ========== -->
+    <div class="section" id="section-notifications">
+      <div class="grid2">
+        <div class="glass-card">
+          <div class="sec-header"><span class="sec-title">Gửi thông báo</span></div>
+          <div class="form-group">
+            <label class="form-label">Người nhận</label>
+            <select class="form-control" id="notif-to">
+              <option value="all">Tất cả người dùng</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tiêu đề</label>
+            <input class="form-control" id="notif-title" placeholder="Tiêu đề thông báo...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nội dung</label>
+            <textarea class="form-control" id="notif-content" rows="4" placeholder="Nội dung thông báo..."></textarea>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="sendNotification()">
+            <i class="ti ti-send"></i>Gửi qua WebSocket
+          </button>
+          <div class="mt16">
+            <div style="font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:8px">Log gửi thông báo</div>
+            <div class="ws-area"><div class="ws-log" id="notif-log"></div></div>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="sec-header"><span class="sec-title">Lịch sử đã gửi</span></div>
+          <div id="notif-history">
+            <div class="empty"><i class="ti ti-bell-off"></i>Chưa có thông báo nào được gửi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== INGREDIENTS ========== -->
+    <div class="section" id="section-ingredients">
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">Nguyên liệu</span>
+          <button class="btn btn-primary" onclick="openModal('modal-ingr')"><i class="ti ti-plus"></i>Thêm nguyên liệu</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Tên nguyên liệu</th><th>Tồn kho</th><th>Đơn vị</th><th>Trạng thái</th><th>Thao tác</th></tr>
+            </thead>
+            <tbody id="ingr-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== AUDIT LOGS ========== -->
+    <div class="section" id="section-logs">
+      <div class="glass-card">
+        <div class="sec-header"><span class="sec-title">Audit Log hệ thống</span></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Tài khoản</th><th>Hành động</th><th>Thời gian</th></tr>
+            </thead>
+            <tbody id="log-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+</div><!-- end .main -->
+</div><!-- end .layout -->
+
+<!-- ===== MODALS ===== -->
+<!-- Modal: User -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title"><i class="ti ti-user-plus" style="margin-right:6px"></i>Thêm người dùng</span>
+      <button class="modal-close" onclick="closeModal('modal-user')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Tên đăng nhập</label><input class="form-control" id="u-username" placeholder="username"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="u-email" placeholder="email@example.com"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Mật khẩu</label><input class="form-control" id="u-pass" type="password" placeholder="••••••••"></div>
+      <div class="form-group"><label class="form-label">Vai trò</label>
+        <select class="form-control" id="u-role"><option>Khách hàng</option><option>Nhân viên</option><option>Admin</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-glass" onclick="closeModal('modal-user')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveUser()"><i class="ti ti-check"></i>Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Product -->
+<div class="modal-overlay" id="modal-product">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title"><i class="ti ti-package" style="margin-right:6px"></i>Thêm sản phẩm</span>
+      <button class="modal-close" onclick="closeModal('modal-product')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-group"><label class="form-label">Tên sản phẩm</label><input class="form-control" id="p-name" placeholder="Ví dụ: Trà sữa matcha..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Giá (VND)</label><input class="form-control" id="p-price" type="number" placeholder="45000"></div>
+      <div class="form-group"><label class="form-label">Danh mục</label>
+        <select class="form-control" id="p-cat">
+          <!-- Sẽ được load từ server -->
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Mô tả</label><textarea class="form-control" id="p-desc" rows="3" placeholder="Mô tả sản phẩm..."></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-glass" onclick="closeModal('modal-product')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveProduct()"><i class="ti ti-check"></i>Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Category -->
+<div class="modal-overlay" id="modal-cat">
+  <div class="modal" style="width:380px">
+    <div class="modal-header">
+      <span class="modal-title"><i class="ti ti-category" style="margin-right:6px"></i>Thêm danh mục</span>
+      <button class="modal-close" onclick="closeModal('modal-cat')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-group"><label class="form-label">Tên danh mục</label><input class="form-control" id="c-name" placeholder="Ví dụ: Trà sữa"></div>
+    <div class="form-group"><label class="form-label">Mô tả</label><textarea class="form-control" id="c-desc" rows="3" placeholder="Mô tả danh mục..."></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-glass" onclick="closeModal('modal-cat')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveCat()"><i class="ti ti-check"></i>Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Banner -->
+<div class="modal-overlay" id="modal-banner">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title"><i class="ti ti-photo" style="margin-right:6px"></i>Thêm Banner</span>
+      <button class="modal-close" onclick="closeModal('modal-banner')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-group"><label class="form-label">Tên banner</label><input class="form-control" id="bnr-name" placeholder="Banner mùa hè 2025"></div>
+    <div class="form-group"><label class="form-label">URL hình ảnh</label><input class="form-control" id="bnr-img" placeholder="https://..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Trang hiển thị</label><input class="form-control" id="bnr-site" placeholder="trang-chu"></div>
+      <div class="form-group"><label class="form-label">Ưu tiên</label><input class="form-control" id="bnr-prio" type="number" value="1" min="1"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Mô tả</label><input class="form-control" id="bnr-desc" placeholder="Mô tả banner..."></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-glass" onclick="closeModal('modal-banner')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveBanner()"><i class="ti ti-check"></i>Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Promotion -->
+<div class="modal-overlay" id="modal-promo">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title"><i class="ti ti-ticket" style="margin-right:6px"></i>Tạo mã giảm giá</span>
+      <button class="modal-close" onclick="closeModal('modal-promo')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Mã code</label><input class="form-control" id="promo-code" placeholder="SUMMER25" style="text-transform:uppercase"></div>
+      <div class="form-group"><label class="form-label">Giảm (%)</label><input class="form-control" id="promo-pct" type="number" min="1" max="100" placeholder="20"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Số lượng</label><input class="form-control" id="promo-qty" type="number" placeholder="100"></div>
+      <div class="form-group"><label class="form-label">Ngày hết hạn</label><input class="form-control" id="promo-end" type="date"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Ngày bắt đầu</label><input class="form-control" id="promo-start" type="date"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-glass" onclick="closeModal('modal-promo')">Hủy</button>
+      <button class="btn btn-primary" onclick="savePromo()"><i class="ti ti-check"></i>Tạo mã</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ingredient -->
+<div class="modal-overlay" id="modal-ingr">
+  <div class="modal" style="width:380px">
+    <div class="modal-header">
+      <span class="modal-title"><i class="ti ti-plant-2" style="margin-right:6px"></i>Thêm nguyên liệu</span>
+      <button class="modal-close" onclick="closeModal('modal-ingr')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="form-group"><label class="form-label">Tên nguyên liệu</label><input class="form-control" id="ingr-name" placeholder="Trà xanh matcha..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Số lượng tồn</label><input class="form-control" id="ingr-qty" type="number" placeholder="500"></div>
+      <div class="form-group"><label class="form-label">Đơn vị</label><input class="form-control" id="ingr-unit" placeholder="gram"></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <button class="btn btn-glass" onclick="closeModal('modal-ingr')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveIngr()"><i class="ti ti-check"></i>Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+<script src="../JS/config.js"></script>
+<script src="../JS/index.js"></script>
+
+<script src="../JS/admin.js" defer></script>
+</body>
+</html>

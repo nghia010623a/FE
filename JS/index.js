@@ -6,8 +6,38 @@
 // const API_BASE = "https://abstracts-difficulty-ecological-especially.trycloudflare.com/";
 
 // import API_BASE from "./config.js";
+let stompClient1 = null;
 
-// ==========================================
+function connectNotificationSocket(username) {
+
+    const socket = new SockJS(`${API_BASE}nghiaws`);
+    stompClient1 = Stomp.over(socket);
+
+    stompClient1.debug = null;
+
+    stompClient1.connect({}, function () {
+
+        console.log("✅ WebSocket connected");
+
+        // Channel notification riêng của user
+        stompClient1.subscribe('/noticeonly/user/' + username, function(message) {
+
+            console.log("📩 Notification:", message.body);
+
+            // Hiện notification
+            alert(message.body);
+
+        });
+
+    }, function(err) {
+
+        console.error("❌ STOMP error:", err);
+
+    });
+}
+const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+
+connectNotificationSocket(currentUser.username);// ==========================================
 // 2. CÁC HÀM TIỆN ÍCH (UI, MODAL, AVATAR)
 // ==========================================
 function showErrorModal(text) {
@@ -1790,20 +1820,20 @@ function showSuccessPage({ orderCode, method, qrCode, checkoutUrl, amount, descr
                             box-shadow:0 8px 24px rgba(34,197,94,.3)">
                     <span class="material-symbols-outlined" style="font-size:36px;color:#fff">check</span>
                 </div>
-                <h2 style="font-size:22px;font-weight:600;margin:0 0 8px;color:#1a1a1a">Cảm ơn bạn đã đặt hàng! 🎉</h2>
-                <p style="font-size:14px;color:#666;margin:0 0 4px">Mã đơn hàng: <strong style="color:#0ea5e9">#${orderCode}</strong></p>
-                <p style="font-size:13px;color:#999;margin:0 0 20px">
-                    ${isBank ? '💳 Hình thức: Chuyển khoản ngân hàng' : '💵 Hình thức: Thanh toán khi nhận hàng'}
+                <h2 style="font-size:25px;font-weight:600;margin:0 0 8px;color:#1a1a1a">Cảm ơn bạn đã đặt hàng! </h2>
+                <p style="font-size:17px;color:#666;margin:0 0 4px">Mã đơn hàng: <strong style="color:#0ea5e9">#${orderCode}</strong></p>
+                <p style="font-size:16px;color:#999;margin:0 0 20px">
+                    ${isBank ? '💳 Hình thức: Chuyển khoản ngân hàng' : ' Hình thức: Thanh toán khi nhận hàng'}
                 </p>
                 ${qrSection}
                 <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px">
                     <button onclick="window.location.hash='#home'"
-                        style="padding:12px 24px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer">
-                        🏠 Về trang chủ
+                        style="padding:12px 24px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:500;cursor:pointer">
+                         Về trang chủ
                     </button>
                     <button onclick="window.location.hash='#orders'"
-                        style="padding:12px 24px;background:#fff;color:#0ea5e9;border:1.5px solid #0ea5e9;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer">
-                        📦 Xem đơn hàng
+                        style="padding:12px 24px;background:#fff;color:#0ea5e9;border:1.5px solid #0ea5e9;border-radius:12px;font-size:16px;font-weight:500;cursor:pointer">
+                         Xem đơn hàng
                     </button>
                 </div>
             </div>
@@ -1877,7 +1907,7 @@ function connectWebSocket(orderCode) {
         
         try {
             // Dùng đường dẫn link tunnel của ông
-            const socket = new SockJS('https://hardwood-computing-prevent-favorites.trycloudflare.com/nghiaws'); 
+            const socket = new SockJS(`${API_BASE}nghiaws`); 
             const stompClient = Stomp.over(socket);
 
             // Tắt debug rác console
@@ -1954,4 +1984,115 @@ function showPaymentSuccessModal() {
             window.location.href = 'index.html'; 
         }
     }, 1000);
+}
+// Hàm chuyển sang tab Đơn hàng
+function activateOrderTab(event) {
+    document.getElementById('tab-info').style.display = 'none';
+    document.getElementById('tab-orders').style.display = 'flex';
+    
+    // Cập nhật class active cho menu
+    updateActiveMenu(event);
+
+    // Gọi hàm load dữ liệu
+    loadOrderHistory();
+}
+
+// Hàm chuyển về tab Thông tin cá nhân
+function activateInfoTab(event) {
+    document.getElementById('tab-info').style.display = 'flex';
+    document.getElementById('tab-orders').style.display = 'none';
+    
+    // Cập nhật class active cho menu
+    updateActiveMenu(event);
+}
+
+// Hàm phụ trợ để không phải viết lặp lại việc xóa/thêm class active
+function updateActiveMenu(event) {
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    if(event) event.currentTarget.classList.add('active');
+}
+// Hàm load dữ liệu từ API
+async function loadOrderHistory() {
+    const container = document.getElementById('order-history-container');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align: center; padding: 40px;">Đang tải dữ liệu...</div>';
+
+    try {
+        // Đảm bảo biến API_BASE đã được định nghĩa trong JS/config.js
+        const response = await fetch(`${API_BASE}api/users/orders`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        const orders = await response.json();
+
+        if (!orders || orders.length === 0) {
+            container.innerHTML = `<div style="text-align: center; padding: 40px;">Bạn chưa có đơn hàng nào!</div>`;
+            return;
+        }
+
+        let htmlContent = '';
+        orders.forEach(order => {
+            // 1. Logic xác định trạng thái
+            let isCompleted = (order.status === 'CONFIRMED' || order.status === 'PAID' || order.status === 'CANCELLED');
+            let itemClass = isCompleted ? 'completed-order' : '';
+            
+            // Các biến trạng thái cũ
+            let statusText = 'ĐANG XỬ LÝ';
+            let statusColor = '#36bcda';
+            let icon = 'local_shipping';
+            let iconClass = '';
+        
+            if (order.status === 'CONFIRMED' || order.status === 'PAID') {
+                statusText = 'ĐÃ HOÀN THÀNH';
+                statusColor = 'var(--on-surface-variant)';
+                iconClass = 'completed';
+                icon = 'check_circle';
+            } else if (order.status === 'CANCELLED') {
+                statusText = 'ĐÃ HỦY';
+                statusColor = '#ff4d4f'; 
+                iconClass = 'completed'; 
+                icon = 'cancel';
+            }
+        
+            // 2. Lấy hình ảnh (Dùng API_BASE kết hợp với imageUrl)
+            const firstProduct = order.orderDetails?.[0]?.product;
+            const imgFilename = firstProduct?.images?.[0]?.imageUrl; 
+            console.log(imgFilename);
+            const imgSrc = imgFilename ? `${API_BASE}${imgFilename}` : '../default-tea.png';
+        
+            const productDesc = firstProduct?.productName || "Đơn hàng Bingchun";
+            const moreItems = order.orderDetails?.length > 1 ? ` và ${order.orderDetails.length - 1} món khác` : "";
+        
+            // 3. Render HTML
+            htmlContent += `
+                <div class="order-item ${itemClass}">
+                    <div class="order-left">
+                        <div class="order-icon-box ${iconClass}">
+                            ${imgFilename 
+                                ? `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain; border-radius:1rem;">` 
+                                : `<span class="material-symbols-outlined">${icon}</span>`
+                            }
+                        </div>
+                        <div class="order-info">
+                            <h4>Đơn hàng #BC-${order.orderId}</h4>
+                            <p class="order-desc">${productDesc}${moreItems}</p>
+                            <p class="order-status" style="color: ${statusColor};">${statusText}</p>
+                        </div>
+                    </div>
+                    <div class="order-right">
+                        <p class="order-price">${new Intl.NumberFormat('vi-VN').format(order.amount)}đ</p>
+                        <p class="order-date">${new Date(order.orderDate).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = htmlContent;
+
+    } catch (error) {
+        console.error(error);
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: red;">Lỗi kết nối server!</div>';
+    }
 }

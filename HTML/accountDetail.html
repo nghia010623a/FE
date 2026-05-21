@@ -633,7 +633,16 @@
             font-family: var(--font-body);
             cursor: pointer;
         }
+        .order-item.completed-order {
+    opacity: 0.7; /* Làm mờ nhẹ */
+    background: #f9f9f9; /* Màu nền nhạt hơn */
+    border: 1px solid #e0e0e0;
+}
 
+/* Đổi màu text cho đơn hoàn thành */
+.order-item.completed-order .order-price {
+    color: var(--on-surface-variant);
+}
         /* Footer */
         .site-footer {
             margin-top: auto;
@@ -760,17 +769,17 @@
 <p class="brand-tagline">Premium Infusion</p> -->
 </div>
 <nav class="nav-menu">
+    <div class="nav-item">
+        <a class="nav-link active" style="cursor: pointer;" onclick="activateInfoTab(event)">
+            <span class="material-symbols-outlined nav-icon">person</span>
+            Thông tin tài khoản
+        </a>
+    </div>
 <div class="nav-item">
-<a class="nav-link active" href="#">
-<span class="material-symbols-outlined nav-icon">person</span>
-                    Thông tin tài khoản
-                </a>
-</div>
-<div class="nav-item">
-<a class="nav-link" href="#">
-<span class="material-symbols-outlined nav-icon">shopping_bag</span>
-                    Đơn hàng của tôi
-                </a>
+    <a class="nav-link" style="cursor: pointer;" onclick="activateOrderTab(event)">
+        <span class="material-symbols-outlined nav-icon">shopping_bag</span>
+        Đơn hàng của tôi
+    </a>
 </div>
 <div class="nav-item">
 <a class="nav-link" href="#">
@@ -796,107 +805,62 @@
     <p class="welcome-subtitle">Chào mừng bạn quay trở lại với không gian trà Bingchun.</p>
 </section>
 <div class="grid-layout">
-<!-- Left Column -->
-<div class="profile-main-stack">
-<!-- Personal Info Card -->
- 
-<div class="base-card profile-card" style="position: relative; overflow: hidden;">
-    
-<span class="material-symbols-outlined" style="position: absolute; right: 2rem; top: 2rem; font-size: 140px; opacity: 0.05;">person</span>
-<h3 class="card-title">Thông tin cá nhân</h3>
-<form>
-    <div class="avatar-upload">
-        <div class="avatar-edit">
-            <input type='file' id="imageUpload" accept=".png, .jpg, .jpeg" />
-            <label for="imageUpload">
-                <i class="fa-solid fa-camera"></i> </label>
+    <div class="left-tabs-wrapper">
+        
+        <div class="profile-main-stack" id="tab-info">
+            <div class="base-card profile-card" style="position: relative; overflow: hidden;">
+                <span class="material-symbols-outlined" style="position: absolute; right: 2rem; top: 2rem; font-size: 140px; opacity: 0.05;">person</span>
+                <h3 class="card-title">Thông tin cá nhân</h3>
+                <form>
+                    <div class="avatar-upload">
+                        <div class="avatar-edit">
+                            <input type='file' id="imageUpload" accept=".png, .jpg, .jpeg" />
+                            <label for="imageUpload">
+                                <i class="fa-solid fa-camera"></i> 
+                            </label>
+                        </div>
+                        <div class="avatar-preview" style="border:1px solid white">
+                            <img id="imagePreview" alt="Avatar" style="width:80px;height: auto">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="text-align: center;margin-bottom: 30px">
+                            <p style="font-size: 14px;line-height: 2.1;">Cung cấp thông tin chính xác sẽ hỗ trợ bạn trong quá trình đặt hàng, hoặc khi cần xác thực</p>
+                        </label>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Username</label>
+                            <input id="username" class="form-control" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Số điện thoại</label>
+                            <input id="phone" class="form-control" type="tel"/>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input id="email" class="form-control" type="email"/>
+                        </div>
+                    </div>
+                    <button class="btn-primary" type="submit">Lưu thay đổi</button>
+                </form>
+            </div>
         </div>
-        <div class="avatar-preview" style="border:1px solid white">
-            <img id="imagePreview" alt="Avatar" style="width:80px;height: auto">
+
+        <div class="profile-main-stack" id="tab-orders" style="display: none;">
+            <div class="base-card orders-section">
+                <div class="orders-header">
+                    <div>
+                        <h3 class="card-title" style="margin-bottom: 0.25rem;">Đơn hàng của bạn</h3>
+                        <p class="order-desc" style="font-size: 0.875rem;">Theo dõi quá trình vận chuyển trà của bạn.</p>
+                    </div>
+                </div>
+                <div class="order-list" id="order-history-container">
+                    </div>
+            </div>
         </div>
-    </div>
-    <div class="form-group">
-        <label class="form-label" style="text-align: center;margin-bottom: 30px"><p style="font-size: 14px;line-height: 2.1;">Cung cấp thông tin chính xác sẽ hỗ trợ bạn trong quá trình đặt hàng, hoặc khi cần xác thực</p></label>
 
-    
     </div>
-<div class="form-grid">
-<div class="form-group">
-<label class="form-label">Username</label>
-<input id="username" class="form-control" type="text"/>
-</div>
-<div class="form-group">
-<label class="form-label">Số điện thoại</label>
-<input id="phone" class="form-control" type="tel"/>
-</div>
-<div class="form-group">
-<label class="form-label">Email</label>
-<input id="email" class="form-control" type="email"/>
-</div>
-<div class="form-group">
-<label class="form-label">Ngày sinh</label>
-<input id="dob" class="form-control" type="text"/>
-</div>
-
-</div>
-<div class="form-group" style="margin-bottom: 2rem;">
-<label class="form-label">Giới tính</label>
-<div class="gender-options">
-<button class="btn-toggle active" type="button">Nam</button>
-<button class="btn-toggle" type="button">Nữ</button>
-<button class="btn-toggle" type="button">Khác</button>
-</div>
-</div>
-<button class="btn-primary" type="submit" >Lưu thay đổi</button>
-</form>
-</div>
-<!-- Recent Orders Card -->
-<div class="base-card orders-section">
-<div class="orders-header">
-<div>
-<h3 class="card-title" style="margin-bottom: 0.25rem;">Đơn hàng gần đây</h3>
-<p class="order-desc" style="font-size: 0.875rem;">Theo dõi quá trình vận chuyển trà của bạn.</p>
-</div>
-<a class="view-all-link" href="#">Xem tất cả</a>
-</div>
-<div class="order-list">
-<!-- Order 1 -->
-<div class="order-item">
-<div class="order-left">
-<div class="order-icon-box">
-<span class="material-symbols-outlined">local_shipping</span>
-</div>
-<div class="order-info">
-<h4>Đơn hàng #BC-8892</h4>
-<p class="order-desc">Trà Ô Long Đặc Sản, Bạch Trà Mùa Xuân</p>
-<p class="order-status">Đang giao hàng</p>
-</div>
-</div>
-<div class="order-right">
-<p class="order-price">1.250.000đ</p>
-<p class="order-date">12/10/2024</p>
-</div>
-</div>
-<!-- Order 2 -->
-<div class="order-item">
-<div class="order-left">
-<div class="order-icon-box completed">
-<span class="material-symbols-outlined">check_circle</span>
-</div>
-<div class="order-info">
-<h4>Đơn hàng #BC-7721</h4>
-<p class="order-desc">Bộ Ấm Chén Sứ Thanh Hoa</p>
-<p class="order-status" style="color: var(--on-surface-variant)">Đã hoàn thành</p>
-</div>
-</div>
-<div class="order-right">
-<p class="order-price">3.500.000đ</p>
-<p class="order-date">05/10/2024</p>
-</div>
-</div>
-</div>
-</div>
-</div>
 <!-- Right Column -->
 <div class="widget-stack">
 <!-- Change Password Widget -->
@@ -946,6 +910,16 @@
 </div>
 </main>
 </main>
+<script>
+    function activateOrderTab() {
+        // Ẩn tab thông tin, hiện tab đơn hàng
+        document.getElementById('tab-info').classList.add('hidden');
+        document.getElementById('tab-orders').classList.remove('hidden');
+        
+        // Gọi hàm load dữ liệu
+        loadOrderHistory();
+    }
+    </script>
 <script src="../JS/config.js"></script>
 
 <script src="JS/index.js">
