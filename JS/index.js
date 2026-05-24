@@ -7,37 +7,166 @@
 
 // import API_BASE from "./config.js";
 let stompClient1 = null;
+let userNotifications = [];
+
+function getCurrentUser() {
+    try {
+        const raw = localStorage.getItem("currentUser");
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function parseNotificationPayload(body) {
+    try {
+        return JSON.parse(body);
+    } catch (e) {
+        return { title: "Thông báo", content: body, createdAt: new Date().toISOString(), read: false };
+    }
+}
+
+function ensureNotificationUi() {
+    if (!document.getElementById("user-notif-panel")) {
+        const panel = document.createElement("div");
+        panel.id = "user-notif-panel";
+        panel.style.cssText = "display:none;position:fixed;top:82px;right:9%;width:min(360px,calc(100vw - 28px));max-height:460px;overflow:auto;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.7);box-shadow:0 20px 50px rgba(15,23,42,.18);border-radius:18px;z-index:100000;padding:14px;";
+        document.body.appendChild(panel);
+    }
+    if (!document.getElementById("user-notif-toast-wrap")) {
+        const wrap = document.createElement("div");
+        wrap.id = "user-notif-toast-wrap";
+        wrap.style.cssText = "position:fixed;right:20px;bottom:20px;z-index:100001;display:flex;flex-direction:column;gap:10px;";
+        document.body.appendChild(wrap);
+    }
+}
+
+function renderUserNotificationBadge() {
+    const badge = document.getElementById("user-notif-count");
+    if (!badge) return;
+    const unread = userNotifications.filter(n => !n.read).length;
+    badge.textContent = unread > 99 ? "99+" : String(unread);
+    badge.style.display = unread > 0 ? "flex" : "none";
+}
+
+function renderUserNotificationPanel() {
+    ensureNotificationUi();
+    const panel = document.getElementById("user-notif-panel");
+    if (!panel) return;
+    if (!userNotifications.length) {
+        panel.innerHTML = '<div style="padding:22px;text-align:center;color:#64748b;font-size:14px;">Chưa có thông báo</div>';
+        return;
+    }
+    panel.innerHTML = `
+        <div style="font-weight:800;font-size:16px;margin:4px 4px 12px;color:#0f172a;">Thông báo</div>
+        ${userNotifications.map(n => `
+            <div style="padding:12px;border-radius:14px;margin-bottom:8px;background:${n.read ? 'rgba(248,250,252,.86)' : 'rgba(224,242,254,.9)'};border:1px solid rgba(14,165,233,.12);">
+                <div style="font-weight:700;color:#0f172a;font-size:14px;margin-bottom:4px;">${n.title || 'Thông báo'}</div>
+                <div style="color:#475569;font-size:13px;line-height:1.4;">${n.content || ''}</div>
+                <div style="color:#94a3b8;font-size:11px;margin-top:7px;">${n.createdAt ? new Date(n.createdAt).toLocaleString('vi-VN') : ''}</div>
+            </div>
+        `).join('')}`;
+}
+
+function showUserNotificationToast(notification) {
+    ensureNotificationUi();
+    const wrap = document.getElementById("user-notif-toast-wrap");
+    if (!wrap) return;
+    const toast = document.createElement("div");
+    toast.style.cssText = "width:min(340px,calc(100vw - 40px));background:white;border:1px solid rgba(14,165,233,.18);border-radius:16px;box-shadow:0 16px 36px rgba(15,23,42,.18);padding:13px 15px;color:#0f172a;";
+    toast.innerHTML = `<div style="font-weight:800;font-size:14px;margin-bottom:4px;">${notification.title || 'Thông báo'}</div><div style="font-size:13px;color:#475569;line-height:1.4;">${notification.content || ''}</div>`;
+    wrap.prepend(toast);
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(8px)";
+        toast.style.transition = ".25s";
+        setTimeout(() => toast.remove(), 260);
+    }, 4200);
+}
+
+function addUserNotification(notification, shouldToast = true) {
+    const normalized = {
+        id: notification.id ?? `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: notification.title || "Thông báo",
+        content: notification.content || "",
+        createdAt: notification.createdAt || new Date().toISOString(),
+        read: Boolean(notification.read)
+    };
+    userNotifications = [normalized, ...userNotifications.filter(n => n.id !== normalized.id)];
+    renderUserNotificationBadge();
+    renderUserNotificationPanel();
+    if (shouldToast) showUserNotificationToast(normalized);
+}
+
+async function loadUserNotifications() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+    try {
+        const res = await fetch(`${API_BASE}api/users/notifications`, {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok) return;
+        userNotifications = await res.json();
+        renderUserNotificationBadge();
+        renderUserNotificationPanel();
+    } catch (e) {
+        console.error("Không tải được thông báo:", e);
+    }
+}
+
+async function markVisibleNotificationsRead() {
+    const unreadIds = userNotifications.filter(n => !n.read && typeof n.id === "number").map(n => n.id);
+    userNotifications = userNotifications.map(n => ({ ...n, read: true }));
+    renderUserNotificationBadge();
+    renderUserNotificationPanel();
+    await Promise.all(unreadIds.map(id => fetch(`${API_BASE}api/users/notifications/${id}/read`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+    }).catch(() => null)));
+}
+
+window.toggleUserNotifPanel = function() {
+    ensureNotificationUi();
+    const panel = document.getElementById("user-notif-panel");
+    if (!panel) return;
+    const willOpen = panel.style.display !== "block";
+    panel.style.display = willOpen ? "block" : "none";
+    if (willOpen) markVisibleNotificationsRead();
+};
 
 function connectNotificationSocket(username) {
+    if (!username || !window.SockJS || !window.Stomp || stompClient1?.connected) return;
 
     const socket = new SockJS(`${API_BASE}nghiaws`);
     stompClient1 = Stomp.over(socket);
-
     stompClient1.debug = null;
 
     stompClient1.connect({}, function () {
-
-        console.log("✅ WebSocket connected");
-
-        // Channel notification riêng của user
-        stompClient1.subscribe('/noticeonly/user/' + username, function(message) {
-
-            console.log("📩 Notification:", message.body);
-
-            // Hiện notification
-            alert(message.body);
-
-        });
-
+        console.log("WebSocket connected");
+        const handler = function(message) {
+            const payload = parseNotificationPayload(message.body);
+            addUserNotification(payload, true);
+            if (!payload.id) loadUserNotifications();
+            if (payload.type === "ORDER_STATUS" && typeof loadOrderHistory === "function") {
+                loadOrderHistory();
+            }
+        };
+        stompClient1.subscribe('/noticeonly/user/' + username, handler);
+        stompClient1.subscribe('/noticeall/notifications', handler);
     }, function(err) {
-
-        console.error("❌ STOMP error:", err);
-
+        console.error("STOMP error:", err);
     });
 }
-const currentUser = JSON.parse(localStorage.getItem("currentUser"));
 
-connectNotificationSocket(currentUser.username);// ==========================================
+const currentUser = getCurrentUser();
+if (currentUser?.username) {
+    connectNotificationSocket(currentUser.username);
+    document.addEventListener("DOMContentLoaded", loadUserNotifications);
+}
+// ==========================================
 // 2. CÁC HÀM TIỆN ÍCH (UI, MODAL, AVATAR)
 // ==========================================
 function showErrorModal(text) {
@@ -60,11 +189,11 @@ function setupUserImage() {
     if (!imageUser) return;
 
     let imagePath = localStorage.getItem("imageUser");
-    
+
     if (imagePath && imagePath !== "null" && imagePath !== "undefined") {
         imageUser.src = imagePath.startsWith('http') ? imagePath : (API_BASE + imagePath);
     } else {
-        imageUser.src = "https://ui-avatars.com/api/?name=User&background=random"; 
+        imageUser.src = "https://ui-avatars.com/api/?name=User&background=random";
     }
 }
 
@@ -117,7 +246,7 @@ function initUpdateProfileForm() {
         if (!phoneRegex.test(phone)) return showErrorModal("Số điện thoại không hợp lệ");
         if (!email) return showErrorModal("Không có email");
 
-       
+
         if (!address) return showErrorModal("Vui lòng nhập địa chỉ");
 
         try {
@@ -149,7 +278,7 @@ async function getDetailAccount() {
     try {
         const res = await fetch(API_BASE + "api/users/me", {
             method: "GET",
-            credentials: "include", 
+            credentials: "include",
             headers: {
                 "Content-Type": "application/json",
                 // "ngrok-skip-browser-warning": "69420"
@@ -159,7 +288,7 @@ async function getDetailAccount() {
         if (!res.ok) throw new Error(`Lỗi HTTP: ${res.status}`);
 
         const data = await res.json();
-        
+
         const fields = {
             "username": data.username,
             "phone": data.phonenum,
@@ -206,7 +335,7 @@ async function logoutService() {
             window.location.href = "HTML/login.html";
         } else {
             const data = await response.json();
-            showErrorModal(data.message || "Lỗi khi đăng xuất");     
+            showErrorModal(data.message || "Lỗi khi đăng xuất");
         }
     } catch (error) {
         console.error("Lỗi kết nối:", error);
@@ -258,7 +387,7 @@ function setupSingleUpload(input, preview) {
         if (file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                preview.src = e.target.result; 
+                preview.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
@@ -292,7 +421,7 @@ function getLocation() {
 
                         // 2. Trích xuất Phường/Xã và Quận/Huyện từ kết quả trả về
                         const addressInfo = data.address;
-                        
+
                         // Nominatim trả về tên xã/phường qua các trường: quarter, suburb, village, town, ward
                         let ward = addressInfo.quarter || addressInfo.suburb || addressInfo.ward || addressInfo.village || addressInfo.town;
                         // Tên quận/huyện qua các trường: suburb, district, borough, county
@@ -336,7 +465,7 @@ function getLocation() {
                         console.error("Lỗi Fetch địa chỉ:", err);
                         alert("Không thể kết nối tới máy chủ địa chỉ. Vui lòng tự chọn bằng tay!");
                     });
-            }, 
+            },
             (error) => {
                 switch(error.code) {
                     case error.PERMISSION_DENIED:
@@ -403,8 +532,16 @@ function maintainNav() {
 }
 
 async function loadPage(url) {
-    const path = url.replace('#', '').replace(/^\//, '').replace('.html', '');
-    
+    // const path = url.replace('#', '').replace(/^\//, '').replace('.html', '');
+     // Bỏ dấu # và chuẩn hóa
+     const raw = url.replace('#', '').replace(/^\//, '').replace('.html', '');
+
+     // TÁCH path và query string (nếu có)
+     const [path, queryString] = raw.split('?');
+     // LƯU params vào biến toàn cục để dùng sau
+     window.currentQueryParams = new URLSearchParams(queryString || '');
+
+
     let page = "HTML/home.html"; // Default
     if (path === "account-detail" || path === "accountDetail") page = "HTML/accountDetail.html";
     else if (path === "update-profile") page = "HTML/updateProfile.html";
@@ -412,11 +549,13 @@ async function loadPage(url) {
     else if (path === "icecream") page = "HTML/icecream.html";
     else if (path === "cart") page = "HTML/cart.html";
     else if (path === "notification") page = "HTML/notification.html";
+    else if (path === "order-detail") page = "HTML/orderDetail.html";  // <-- THÊM DÒNG NÀY
+
 
     try {
         const res = await fetch(page);
         if (!res.ok) throw new Error(`Lỗi fetch: ${res.status}`);
-        
+
         const contentMain = document.getElementById("contentMain");
         if (contentMain) {
             contentMain.innerHTML = await res.text();
@@ -523,17 +662,28 @@ function handlePostLoadLogic(path) {
         initAddressAutoFill(); // Gọi hàm mới ở đây
 
     }
-
+    if (path === "order-detail") {
+        // Lấy orderId từ biến toàn cục đã lưu ở loadPage
+        const params = window.currentQueryParams;
+        const orderId = params ? params.get('id') : null;
+        if (orderId) {
+            fetchAndRenderOrderDetail(orderId); // hoặc gọi renderOrderDetailUI(order)
+        } else {
+            // Nếu không có id, hiển thị thông báo
+            const detailPage = document.getElementById('order-detail-page');
+            if (detailPage) detailPage.innerHTML = '<p style="text-align:center;padding:40px;">Không tìm thấy mã đơn hàng</p>';
+        }
+    }
     if (path.includes("account")) {
-        getDetailAccount(); 
+        getDetailAccount();
         initAvatarUpload();
-        
+
         const overlay = document.getElementById("googleOverlay");
         if (overlay && localStorage.getItem("loginWithGoogle") === "true") {
             overlay.classList.add("active");
         }
     }
-    
+
     // Nếu load vào trang menu, khởi tạo logic menu động
     const renderContainer = document.getElementById("render-container");
     if (renderContainer) {
@@ -544,7 +694,7 @@ function handlePostLoadLogic(path) {
 
 function navigate(event, url) {
     if (event) event.preventDefault();
-    history.pushState({}, "", url); 
+    history.pushState({}, "", url);
     loadPage(url);
 }
 
@@ -555,16 +705,16 @@ document.addEventListener("DOMContentLoaded", function() {
     let isUpdateProfile = localStorage.getItem("isUpdateProfile");
 
     if (isUpdateProfile === "false") {
-        loadPage("#update-profile"); 
+        loadPage("#update-profile");
         window.location.hash = "#update-profile";
     } else {
         const currentHash = window.location.hash || "#home";
-        loadPage(currentHash); 
+        loadPage(currentHash);
     }
 
     maintainNav();
     refreshToken();
-    
+
     // Gắn logic menu ở trang chủ/menu lần đầu
     // initDynamicMenu();
 });
@@ -574,8 +724,6 @@ window.onpopstate = function () {
     loadPage(currentPath);
 };
 
-
-//load pd
 async function loadProduct() {
     try {
         const response = await fetch(
@@ -583,7 +731,7 @@ async function loadProduct() {
             {
                 method: "GET",
                 headers: {// Bỏ qua màn hình cảnh báo
-                    // "ngrok-skip-browser-warning": "true", 
+                    // "ngrok-skip-browser-warning": "true",
                     "Content-Type": "application/json"
                 }
             }
@@ -656,31 +804,31 @@ async function initDynamicMenu() {
     const createProductCard = (item) => {
         // Nối link ảnh chuẩn
         const fullImageUrl = API_BASE+`${item.imageUrl}`;
-        
+
         return `
-<div style="cursor:pointer;box-shadow:inset 0 8px 32px 0 white" class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between 
-                border-2 border-transparent hover:border-blue-600 hover:shadow-2xl transition-all duration-500">        
-                
-                <div class="absolute top-2 left-2 w-16 h-16 z-20 
+<div style="cursor:pointer;box-shadow:inset 0 8px 32px 0 white" class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between
+                border-2 border-transparent hover:border-blue-600 hover:shadow-2xl transition-all duration-500">
+
+                <div class="absolute top-2 left-2 w-16 h-16 z-20
                     pointer-events-none opacity-0 -translate-x-5 group-hover:opacity-100 group-hover:translate-x-0 group-hover:border-blue-600
                     transition-all duration-500 ease-out">
-            <img 
-                src="../binglogo.png" 
-                alt="Badge" 
+            <img
+                src="../binglogo.png"
+                alt="Badge"
                 class="w-full h-full object-contain filter drop-shadow-lg"
             >
         </div>
-                
+
                 <div class="relative w-full aspect-square rounded-3xl overflow-hidden mb-6 bg-gray-100 flex items-center justify-center">
-                <img 
-                    src="${fullImageUrl}" 
-                    alt="${item.productName}" 
+                <img
+                    src="${fullImageUrl}"
+                    alt="${item.productName}"
                     class="max-w-full max-h-full object-contain transition-transform duration-700"
                 >
-                <div class="absolute top-0 left-4 w-12 h-12 z-10 
-                        opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100 
+                <div class="absolute top-0 left-4 w-12 h-12 z-10
+                        opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100
                         transition-all duration-500 ease-out">
-               
+
             </div>
             </div>
 
@@ -690,7 +838,7 @@ async function initDynamicMenu() {
                 </h3>
 
                 <div style="cursor:pointer" class="flex items-center gap-2 mb-3">
-                    ${renderStars(item.rating)} 
+                    ${renderStars(item.rating)}
                     <span class="text-xs text-on-surface-variant">
                         ${(item.rating).toFixed(1)}
                     </span>
@@ -702,8 +850,8 @@ async function initDynamicMenu() {
                     </span>
 
                     <!-- SỬA TẠI ĐÂY: id="addCart" -> class="add-to-cart-btn" và thêm data-product-id -->
-                    <button 
-                        style="background-color:rgba(111, 172, 216)" 
+                    <button
+                        style="background-color:rgba(111, 172, 216)"
                         class="add-to-cart-btn w-12 h-12 rounded-2xl text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
                         data-product-id="${item.productId}"
                     >
@@ -736,7 +884,7 @@ async function initDynamicMenu() {
             renderContainer.innerHTML = items.length
                 ? items.map(item => createProductCard(item)).join('')
                 : "<p class='col-span-full text-center py-20 text-on-surface-variant'>Không tìm thấy sản phẩm phù hợp...</p>";
-            
+
             renderContainer.style.opacity = 1;
         }, 200);
     };
@@ -796,7 +944,7 @@ function animateFlyToCart(imgElement, cartElement) {
     flyImg.addEventListener('transitionend', () => {
         flyImg.remove();
         // Hiệu ứng rung của Tailwind (đảm bảo bạn có class này hoặc animate-ping)
-        cartElement.classList.add('animate-bounce'); 
+        cartElement.classList.add('animate-bounce');
         setTimeout(() => cartElement.classList.remove('animate-bounce'), 400);
     });
 }
@@ -805,19 +953,19 @@ function animateFlyToCart(imgElement, cartElement) {
 // Viết dạng async để xử lý bất đồng bộ
 async function addToCartApi(productId) {
     // --- CẤU HÌNH API CỦA BẠN TẠI ĐÂY ---
-    
+
     // Nếu API cần Token đăng nhập, lấy nó từ localStorage hoặc biến global
-    const token = localStorage.getItem('userToken'); 
+    const token = localStorage.getItem('userToken');
 
     // Dữ liệu body gửi lên, thường API cần productId và quantity
     const bodyData = {
         productId: Number(productId),
-        quantity: 1 
+        quantity: 1
     };
 
     try {
         console.log(`Đang gọi API add sản phẩm ${productId} to server...`);
-        
+
         const response = await fetch( API_BASE+"api/users/cart", {
             method: "POST",
             credentials: "include",
@@ -827,25 +975,25 @@ async function addToCartApi(productId) {
             },
             body: JSON.stringify(bodyData)
         });
-    
+
         // Luôn đọc text trước
         const text = await response.text();
-    
+
         if (!response.ok) {
             throw new Error(text || `Lỗi server: ${response.status}`);
         }
-    
+
         console.log('Response từ server:', text); // "OK"
-    
+
         // Tăng badge lên 1 vì server chỉ trả "OK", không trả số lượng
         const badge = document.getElementById('cart-count');
         if (badge) {
             const current = parseInt(badge.innerText) || 0;
             updateCartBadgeUI(current + 1);
         }
-    
+
         return text;
-    
+
     } catch (error) {
         console.error('Lỗi API AddToCart:', error);
         alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
@@ -866,8 +1014,8 @@ function updateCartBadgeUI(count) {
 // 4. Gắn sự kiện Click toàn cục (Event Delegation)
 document.addEventListener('click', async (e) => {
     // Tìm xem cú click có nằm trong hoặc là nút add-to-cart không
-    const btn = e.target.closest('.add-to-cart-btn'); 
-    
+    const btn = e.target.closest('.add-to-cart-btn');
+
     if (btn) {
         e.preventDefault(); // Ngăn chặn hành vi mặc định nếu là thẻ a
 
@@ -878,7 +1026,7 @@ document.addEventListener('click', async (e) => {
         // Tìm ảnh sản phẩm trong cùng card để làm hiệu ứng bay
         const productCard = btn.closest('.glass-card');
         const productImg = productCard.querySelector('img'); // Lấy ảnh chính đầu tiên
-        
+
         // Tìm icon giỏ hàng trên header làm đích đến (đảm bảo ID này đúng)
         const cartIcon = document.getElementById('cart-icon');
 
@@ -930,12 +1078,12 @@ async function loadCartFromServer() {
             credentials: "include"
         });
         if (!response.ok) throw new Error("Network response was not ok");
-        
+
         const data = await response.json();
-        
+
         // Cực kỳ quan trọng: Thêm thuộc tính isSelected mặc định là true cho mỗi sản phẩm
         cartData = data.map(item => ({ ...item, isSelected: true }));
-        
+
         renderAll();
     } catch (error) {
         console.error("Huhu, không lấy được giỏ hàng:", error);
@@ -958,11 +1106,11 @@ function renderCart(products) {
         const productHTML = `
             <div class="cart-item glass-deep" data-id="${product.productId}">
                 <div class="item-checkbox-container">
-                    <input type="checkbox" class="custom-checkbox" 
-                           ${product.isSelected ? 'checked' : ''} 
+                    <input type="checkbox" class="custom-checkbox"
+                           ${product.isSelected ? 'checked' : ''}
                            onchange="toggleCheck(${product.productId})" />
                 </div>
-                
+
                 <img     style="width: 120px; height: 120px; object-fit: contain;" class="item-img" src="${API_BASE}${product.imageUrl}"/>
                 <div class="item-details">
                     <h3 class="item-title">${product.productName}</h3>
@@ -1045,12 +1193,12 @@ function renderOrderSummary(products) {
             <button onclick="setDelivery('takeaway')" style="flex:1;padding:9px;font-size:13px;font-weight:500;border:none;cursor:pointer;
                 background:${deliveryMode==='takeaway'?'var(--primary)':'white'};
                 color:${deliveryMode==='takeaway'?'white':'var(--primary)'}">
-                🏪 Lấy tại cửa hàng
+                 Lấy tại cửa hàng
             </button>
             <button onclick="setDelivery('ship')" style="flex:1;padding:9px;font-size:13px;font-weight:500;border:none;border-left:1.5px solid var(--primary);cursor:pointer;
                 background:${deliveryMode==='ship'?'var(--primary)':'white'};
                 color:${deliveryMode==='ship'?'white':'var(--primary)'}">
-                🚚 Giao hàng
+                 Giao hàng
             </button>
         </div>
 
@@ -1142,7 +1290,7 @@ window.openAddrModal = async () => {
                 <div id="addr-list"><div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải...</div></div>
 
                 <!-- Nút thêm địa chỉ mới -->
-                <div id="add-addr-btn" onclick="toggleAddForm()" 
+                <div id="add-addr-btn" onclick="toggleAddForm()"
                     style="display:flex;align-items:center;gap:6px;color:var(--primary);font-size:13px;
                            font-weight:500;cursor:pointer;padding:12px 0;border-top:1px solid #f0f0f0;margin-top:4px">
                     <span class="material-symbols-outlined" style="font-size:20px">add_circle</span>
@@ -1287,7 +1435,7 @@ window.saveNewAddress = async () => {
         renderAddresses();
     } catch (e) {
     } finally {
-        btn.textContent = 'Lưu địa chỉ'; 
+        btn.textContent = 'Lưu địa chỉ';
         btn.disabled = false;
     }
 };
@@ -1498,8 +1646,8 @@ function renderVoucherList() {
                     Giảm ${v.percent}%
                 </div>
                 <div style="font-size:12px;color:#888;margin-top:2px">
-                    Mã: <strong>${v.code}</strong> 
-                    &nbsp;·&nbsp; 
+                    Mã: <strong>${v.code}</strong>
+                    &nbsp;·&nbsp;
                     Tiết kiệm ${v.value.toLocaleString('vi-VN')}đ
                 </div>
             </div>
@@ -1690,7 +1838,7 @@ document.addEventListener('click', async (e) => {
 
         const order = await resOrder.json();
         const realOrderCode = order.orderCode; // ID thật từ MySQL (Ví dụ: 125)
-        
+
         console.log(">>> Đã lưu DB, Mã đơn hàng thật là:", realOrderCode);
 
         // =========================================================
@@ -1698,9 +1846,9 @@ document.addEventListener('click', async (e) => {
         // =========================================================
         if (payMethod === 'cod') {
             // COD: Xong rồi, hiện luôn trang thành công
-            showSuccessPage({ 
-                orderCode: realOrderCode, 
-                method: 'cod' 
+            showSuccessPage({
+                orderCode: realOrderCode,
+                method: 'cod'
             });
 
         } else {
@@ -1712,7 +1860,7 @@ document.addEventListener('click', async (e) => {
                 body: JSON.stringify({
                     orderCode: realOrderCode, // GỬI ID THẬT CỦA MYSQL SANG PAYOS
                     amount: payload.total
-                    // Đã bỏ `orderDetail: payload` đi vì đơn hàng đã được lưu trên DB rồi, 
+                    // Đã bỏ `orderDetail: payload` đi vì đơn hàng đã được lưu trên DB rồi,
                     // API createQrCode ở backend giờ chỉ cần ID và Amount để báo cho PayOS thôi.
                 })
             });
@@ -1720,7 +1868,7 @@ document.addEventListener('click', async (e) => {
             if (!resPay.ok) throw new Error('Lỗi tạo link thanh toán');
 
             const payosData = await resPay.json();
-            
+
             showSuccessPage({
                 orderCode: realOrderCode, // WebSocket giờ sẽ lắng nghe đúng ID thật
                 method: 'bank',
@@ -1748,11 +1896,11 @@ function showSuccessPage({ orderCode, method, qrCode, checkoutUrl, amount, descr
     if (!contentMain) return;
 
     // Reset giỏ hàng nếu biến tồn tại
-    if (typeof cartData !== 'undefined') cartData = []; 
+    if (typeof cartData !== 'undefined') cartData = [];
 
     const isBank = method === 'bank';
     const formattedAmount = amount ? Number(amount).toLocaleString('vi-VN') + 'đ' : '';
-    
+
     // logic xử lý Nội dung chuyển khoản (Description)
     // Ưu tiên description từ PayOS trả về vì nó chứa mã prefix (ví dụ: CSTW...) để nổ Webhook
     const displayDescription = description || `DH${orderCode}`;
@@ -1778,7 +1926,7 @@ function showSuccessPage({ orderCode, method, qrCode, checkoutUrl, amount, descr
             <div style="padding:20px; color:#ef4444; border:1px dashed #f87171; border-radius:12px; margin-bottom:12px">
                 ⚠️ Không thể tạo mã QR tự động.
             </div>`}
-    
+
             <div style="background:#f9f9f9;border-radius:12px;padding:14px 18px;text-align:left;font-size:13px;line-height:1.8;border:1px dashed #ddd;margin-bottom:14px">
                 <div style="display:flex;justify-content:space-between">
                     <span>💳 Mã đơn hàng:</span>
@@ -1796,7 +1944,7 @@ function showSuccessPage({ orderCode, method, qrCode, checkoutUrl, amount, descr
                     * Vui lòng giữ nguyên nội dung để hệ thống xác nhận tự động.
                 </p>
             </div>
-            
+
             ${checkoutUrl ? `
             <a href="${checkoutUrl}" target="_blank"
                 style="display:inline-block;padding:12px 24px;background:#0ea5e9;color:#fff;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;transition:all 0.2s;box-shadow:0 4px 6px -1px rgba(14, 165, 233, 0.3)">
@@ -1831,10 +1979,10 @@ function showSuccessPage({ orderCode, method, qrCode, checkoutUrl, amount, descr
                         style="padding:12px 24px;background:#0ea5e9;color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:500;cursor:pointer">
                          Về trang chủ
                     </button>
-                    <button onclick="window.location.hash='#orders'"
-                        style="padding:12px 24px;background:#fff;color:#0ea5e9;border:1.5px solid #0ea5e9;border-radius:12px;font-size:16px;font-weight:500;cursor:pointer">
-                         Xem đơn hàng
-                    </button>
+<button onclick="openOrderDetailModal('${orderCode}')"
+   style="padding:12px 24px;background:#fff;color:#0ea5e9;border:1.5px solid #0ea5e9;border-radius:12px;font-size:16px;font-weight:500;cursor:pointer">
+     Xem đơn hàng
+</button>
                 </div>
             </div>
         </div>
@@ -1861,7 +2009,7 @@ function showToast(message, type = 'info') {
     toast.innerHTML = `
         <span class="material-symbols-outlined" style="font-size:18px;flex-shrink:0">${c.icon}</span>
         <span style="flex:1;font-size:13px">${message}</span>
-        <span class="material-symbols-outlined" onclick="this.parentElement.remove()" 
+        <span class="material-symbols-outlined" onclick="this.parentElement.remove()"
               style="font-size:16px;cursor:pointer;opacity:.6">close</span>
     `;
     Object.assign(toast.style, {
@@ -1904,10 +2052,10 @@ function connectWebSocket(orderCode) {
         loadScript("https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js")
     ]).then(() => {
         console.log("✅ Đã nạp thư viện thành công. Đang kết nối...");
-        
+
         try {
             // Dùng đường dẫn link tunnel của ông
-            const socket = new SockJS(`${API_BASE}nghiaws`); 
+            const socket = new SockJS(`${API_BASE}nghiaws`);
             const stompClient = Stomp.over(socket);
 
             // Tắt debug rác console
@@ -1915,7 +2063,7 @@ function connectWebSocket(orderCode) {
 
             stompClient.connect({}, function (frame) {
                 console.log('✅ Đã kết nối STOMP! Đang đợi tín hiệu đơn hàng: ' + orderCode);
-                
+
                 stompClient.subscribe('/noticeonly/payment/' + orderCode, function (message) {
                     console.log("🔥 Nhận tin nhắn từ server:", message.body);
                     if (message.body === "successful") {
@@ -1930,10 +2078,410 @@ function connectWebSocket(orderCode) {
         }
     });
 }
+// ==============================================
+// MODAL CHI TIẾT ĐƠN HÀNG (dạng popup)
+// ==============================================
+function normalizeOrderStatus(status) {
+    return String(status || '').toLowerCase();
+}
+
+function isCompletedOrderStatus(status) {
+    const key = normalizeOrderStatus(status);
+    return key === 'delivered' || key === 'completed';
+}
+
+function getOrderStatusMeta(status) {
+    const map = {
+        pending: { text: 'Chờ xác nhận', icon: '⏳', color: '#f90' },
+        waiting_payment: { text: 'Chờ thanh toán', icon: '💳', color: '#f90' },
+        confirmed: { text: 'Đã xác nhận', icon: '✅', color: '#0a0' },
+        delivered: { text: 'Đã giao hàng', icon: '📦', color: '#0a0' },
+        completed: { text: 'Hoàn thành', icon: '✅', color: '#0a0' },
+        cancelled: { text: 'Đã hủy', icon: '❌', color: '#d00' }
+    };
+    return map[normalizeOrderStatus(status)] || map.pending;
+}
+
+function reviewFormHtml(orderId, productId) {
+    return `
+      <div id="review-box-${orderId}-${productId}" style="margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;" onclick="event.stopPropagation()">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0f172a;">Đánh giá sản phẩm</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <select id="review-rating-${orderId}-${productId}" style="border:1px solid #cbd5e1;border-radius:8px;padding:7px;background:white;">
+            <option value="5">5 sao</option>
+            <option value="4">4 sao</option>
+            <option value="3">3 sao</option>
+            <option value="2">2 sao</option>
+            <option value="1">1 sao</option>
+          </select>
+          <button onclick="submitProductReview(${orderId}, ${productId})" style="border:0;border-radius:8px;background:#0ea5e9;color:white;font-weight:700;padding:8px 12px;cursor:pointer;">Gửi</button>
+        </div>
+        <textarea id="review-content-${orderId}-${productId}" placeholder="Chia sẻ cảm nhận của bạn..." style="width:100%;min-height:66px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;resize:vertical;font-size:13px;"></textarea>
+      </div>`;
+}
+
+async function submitProductReview(orderId, productId) {
+    const ratingEl = document.getElementById(`review-rating-${orderId}-${productId}`);
+    const contentEl = document.getElementById(`review-content-${orderId}-${productId}`);
+    const box = document.getElementById(`review-box-${orderId}-${productId}`);
+    const rating = Number(ratingEl?.value || 5);
+    const content = contentEl?.value.trim() || '';
+
+    try {
+        const res = await fetch(`${API_BASE}api/users/orders/${orderId}/reviews`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ productId, rating, content })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || err.error || `Lỗi ${res.status}`);
+        }
+        if (box) {
+            box.innerHTML = '<div style="color:#15803d;font-weight:700;font-size:13px;">Cảm ơn bạn đã đánh giá sản phẩm.</div>';
+        }
+        showUserNotificationToast({ title: 'Đã gửi đánh giá', content: 'Đánh giá của bạn đã được ghi nhận.' });
+    } catch (error) {
+        if (box) {
+            const old = box.querySelector('.review-error');
+            if (old) old.remove();
+            box.insertAdjacentHTML('beforeend', `<div class="review-error" style="color:#dc2626;font-size:12px;margin-top:6px;">${error.message}</div>`);
+        } else {
+            alert(error.message);
+        }
+    }
+}
+
+function openOrderDetailModal(orderId) {
+    // Xóa modal cũ nếu đang mở
+    const old = document.getElementById('order-detail-modal');
+    if (old) old.remove();
+
+    // Tạo modal
+    const modal = document.createElement('div');
+    modal.id = 'order-detail-modal';
+    Object.assign(modal.style, {
+      position: 'fixed', inset: '0',
+      background: 'rgba(0,0,0,0.5)',
+      zIndex: '10000',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      paddingTop: '40px'
+    });
+
+    // Khung nội dung
+    modal.innerHTML = `
+      <div style="background:#f5f5f5; width:100%; max-width:600px; max-height:85vh;
+                  border-radius:16px; overflow:hidden; display:flex; flex-direction:column;
+                  box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+        <!-- Header -->
+        <div style="background:#fff; padding:16px 20px; border-bottom:1px solid #eee;
+                    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+          <span style="font-size:18px; font-weight:600;">
+            Chi tiết đơn hàng #<span id="modal-order-code">${orderId}</span>
+          </span>
+          <button onclick="closeOrderDetailModal()"
+                  style="background:none; border:none; font-size:24px; cursor:pointer; color:#888;">
+            ✕
+          </button>
+        </div>
+        <!-- Nội dung cuộn -->
+        <div id="modal-order-content" style="flex:1; overflow-y:auto; padding:16px;">
+          <div style="text-align:center; padding:40px; color:#aaa;">Đang tải…</div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Đóng khi click ra ngoài
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeOrderDetailModal();
+    });
+
+    // Tải dữ liệu
+    fetchOrderDetailForModal(orderId);
+  }
+
+  function closeOrderDetailModal() {
+    const modal = document.getElementById('order-detail-modal');
+    if (modal) modal.remove();
+  }
+
+  async function fetchOrderDetailForModal(orderId) {
+    const content = document.getElementById('modal-order-content');
+    if (!content) return;
+
+    content.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;">Đang tải…</div>';
+
+    try {
+      // Dùng đúng API của bạn: /api/users/orders/{id}
+      const res = await fetch(`${API_BASE}api/users/orders/${orderId}`, {
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Lỗi ${res.status}`);
+      }
+
+      const order = await res.json();
+      renderOrderDetailInModal(order);
+    } catch (error) {
+      content.innerHTML = `<div style="text-align:center;padding:40px;color:#e00;">
+        ${error.message}
+      </div>`;
+    }
+  }
+  function renderOrderDetailInModal(order) {
+    const content = document.getElementById('modal-order-content');
+    if (!content) return;
+
+    const status = order.status || 'PENDING';
+    const s = getOrderStatusMeta(status);
+    const canReview = isCompletedOrderStatus(status);
+
+    // ── Địa chỉ ──
+    const addr = order.address || {};
+    const addrBlock = addr.address
+      ? `<div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:12px;">
+           <div style="display:flex; gap:10px;">
+             <span style="font-size:22px;">📍</span>
+             <div style="flex:1;">
+               <div style="font-weight:600; font-size:14px;">
+                 ${addr.name || 'Khách hàng'} – ${addr.phone || ''}
+               </div>
+               <div style="color:#555; font-size:13px; margin-top:2px;">
+                 ${addr.address}
+               </div>
+             </div>
+           </div>
+         </div>`
+      : `<div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:12px; color:#888;">
+           Chưa có địa chỉ
+         </div>`;
+
+    // ── Sản phẩm: lấy từ order.orderDetails ──
+    const orderDetails = order.orderDetails || [];
+    let itemsHtml = '';
+    let subtotal = 0;
+
+    if (orderDetails.length > 0) {
+      itemsHtml = orderDetails.map(item => {
+        // Lấy thông tin sản phẩm từ item.product
+        const product = item.product || {};
+        const name = product.productName || 'Sản phẩm';
+        const price = item.price || 0;  // item.price là giá trong order_detail
+        const qty = item.quantity || 1;
+        subtotal += price * qty;
+
+        // Ảnh sản phẩm: lấy ảnh chính (isMain=true) hoặc ảnh đầu tiên
+        let img = '';
+        const images = product.images || [];
+        if (images.length > 0) {
+          const mainImg = images.find(i => i.isMain === true);
+          img = mainImg ? mainImg.imageUrl : images[0].imageUrl;
+        }
+        if (img && !img.startsWith('http') && !img.startsWith('data:')) {
+          img = API_BASE + img;
+        }
+
+        return `
+          <div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0; align-items:center;">
+            <img src="${img || 'https://via.placeholder.com/80'}"
+                 alt="${name}" style="width:70px; height:70px; border-radius:8px; object-fit:cover;"
+                 onerror="this.src='https://via.placeholder.com/80'">
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500;">${name}</div>
+              <div style="font-size:13px; color:#888;">${price.toLocaleString('vi-VN')}₫</div>
+            </div>
+            <div style="font-weight:600; min-width:50px; text-align:right;">x${qty}</div>
+          </div>
+          ${canReview && product.productId ? reviewFormHtml(order.orderId, product.productId) : ''}`;
+      }).join('');
+    } else {
+      itemsHtml = '<p style="color:#888;">Không có sản phẩm</p>';
+    }
+
+    // ── Tổng tiền ──
+    const discount = order.discount || 0;
+    const total = order.amount || subtotal;
+
+    // Phương thức giao hàng
+    const orderMethod = order.orderMethod || '';
+    let methodText = 'Không rõ';
+    if (orderMethod === 'delivery' || orderMethod === 'DELIVERY') methodText = 'Giao hàng tận nơi';
+    else if (orderMethod === 'takeaway' || orderMethod === 'TAKEAWAY') methodText = 'Nhận tại cửa hàng';
+
+    // Phương thức thanh toán
+    let paymentMethod = 'Không rõ';
+    if (order.payments && order.payments.length > 0) {
+      paymentMethod = order.payments[0].paymentMethod || 'Không rõ';
+    } else if (order.paymentMethod) {
+      paymentMethod = order.paymentMethod;
+    }
+
+    content.innerHTML = `
+      <!-- Trạng thái -->
+      <div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:12px;
+                  display:flex; align-items:center; gap:12px;">
+        <span style="font-size:28px;">${s.icon}</span>
+        <div>
+          <div style="font-weight:600; font-size:15px; color:${s.color};">${s.text}</div>
+          <div style="font-size:12px; color:#888;">Mã đơn: #${order.orderId}</div>
+        </div>
+      </div>
+
+      ${addrBlock}
+
+      <!-- Sản phẩm -->
+      <div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:12px;">
+        <h4 style="margin:0 0 12px; font-size:14px;">Sản phẩm đã đặt</h4>
+        ${itemsHtml}
+      </div>
+
+      <!-- Tổng tiền -->
+      <div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:#555; margin-bottom:6px;">
+          <span>Tạm tính</span><span>${subtotal.toLocaleString('vi-VN')}₫</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:#e74c3c; margin-bottom:6px;">
+          <span>Giảm giá</span><span>-${discount.toLocaleString('vi-VN')}₫</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-weight:700; font-size:15px;
+                    padding-top:8px; border-top:1px solid #eee;">
+          <span>Tổng thanh toán</span><span style="color:#ee4d2d;">${total.toLocaleString('vi-VN')}₫</span>
+        </div>
+      </div>
+
+      <!-- Phương thức -->
+      <div style="background:#fff; border-radius:12px; padding:16px;">
+        <div style="display:flex; gap:10px; margin-bottom:8px;">
+          <span style="font-size:18px;">💳</span>
+          <div>
+            <div style="font-weight:600; font-size:13px;">Phương thức thanh toán</div>
+            <div style="color:#555; font-size:13px;">${paymentMethod}</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <span style="font-size:18px;">🚚</span>
+          <div>
+            <div style="font-weight:600; font-size:13px;">Phương thức giao hàng</div>
+            <div style="color:#555; font-size:13px;">${methodText}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }// Hàm chuyển đến trang chi tiết đơn hàng
+function goToOrderDetail(orderId) {
+    window.location.hash = `order-detail?id=${orderId}`;
+  }
+
+  // Lắng nghe hash change
+  window.addEventListener('hashchange', handleHashChange);
+  window.addEventListener('load', handleHashChange);
+
+  function handleHashChange() {
+    const hash = window.location.hash.substring(1);
+    if (hash.startsWith('order-detail')) {
+        // Để loadPage tải file HTML và xử lý logic
+        loadPage(window.location.hash);
+    } else {
+        // Ẩn trang chi tiết nếu đang mở
+        const page = document.getElementById('order-detail-page');
+        if (page) page.style.display = 'none';
+        // Có thể hiển thị lại các section khác nếu cần
+    }
+}
+
+  async function showOrderDetailPage(orderId) {
+    const page = document.getElementById('order-detail-page');
+    if (!page) {
+      // Nếu chưa có HTML, bạn có thể tạo động hoặc báo lỗi
+      console.error('#order-detail-page không tồn tại trong DOM. Hãy thêm HTML modal/section.');
+      // Fallback: tạo modal đơn giản
+      createOrderDetailModal(orderId);
+      return;
+    }
+    page.style.display = 'block';
+    // Ẩn các trang khác (giả sử bạn có các section id là home-page, products-page,...)
+    document.querySelectorAll('section[id$="-page"]').forEach(s => {
+      if (s.id !== 'order-detail-page') s.style.display = 'none';
+    });
+
+    // Hiển thị loading
+    document.getElementById('detail-order-code').textContent = `#${orderId}`;
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Không thể tải đơn hàng');
+      const order = await response.json();
+      renderOrderDetail(order);
+    } catch (err) {
+      alert('Lỗi: ' + err.message);
+    }
+  }
+
+  function renderOrderDetail(order) {
+    const s = getOrderStatusMeta(order.status);
+    document.getElementById('order-status-icon').textContent = s.icon;
+    document.getElementById('order-status-text').textContent = s.text;
+    document.getElementById('order-status-text').style.color = s.color;
+
+    const addr = order.address || {};
+    document.getElementById('order-address').textContent = addr.address || '...';
+    document.getElementById('order-phone-name').textContent = `${addr.name || ''} - ${addr.phone || ''}`;
+
+    const itemsContainer = document.getElementById('order-items-list');
+    let subtotal = 0;
+    if (order.details && order.details.length > 0) {
+      itemsContainer.innerHTML = order.details.map(item => {
+        subtotal += item.price * item.quantity;
+        return `
+          <div class="order-item" style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0;">
+            <img src="${item.image || 'https://via.placeholder.com/80'}" alt="${item.productName}" style="width:80px; height:80px; border-radius:8px; object-fit:cover;" onerror="this.src='https://via.placeholder.com/80'">
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:500;">${item.productName}</div>
+              <div style="font-size:13px; color:#888;">${item.price?.toLocaleString('vi-VN')}₫</div>
+            </div>
+            <div style="font-weight:600; min-width:60px; text-align:right;">x${item.quantity}</div>
+          </div>`;
+      }).join('');
+    } else {
+      itemsContainer.innerHTML = '<p style="color:#888;">Không có sản phẩm</p>';
+    }
+
+    document.getElementById('order-subtotal').textContent = `${subtotal.toLocaleString('vi-VN')}₫`;
+    const discount = order.discount || 0;
+    document.getElementById('order-discount').textContent = `-${discount.toLocaleString('vi-VN')}₫`;
+    document.getElementById('order-total').textContent = `${(order.amount || subtotal - discount).toLocaleString('vi-VN')}₫`;
+
+    document.getElementById('order-payment-method').textContent = order.paymentMethod || 'Không rõ';
+    document.getElementById('order-delivery-method').textContent = order.method === 'delivery' ? 'Giao hàng tận nơi' : 'Nhận tại cửa hàng';
+  }
+
+  // Fallback nếu không có #order-detail-page
+  function createOrderDetailModal(orderId) {
+    // Tạo modal đơn giản (bạn có thể dùng code modal trước đó)
+    const modal = document.createElement('div');
+    modal.id = 'orderDetailModal';
+    modal.style.cssText = 'display:flex; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:#fff; width:90%; max-width:600px; border-radius:16px; padding:24px; max-height:80vh; overflow-y:auto; position:relative;">
+        <button onclick="this.parentElement.parentElement.remove()" style="position:absolute; top:10px; right:10px; background:none; border:none; font-size:24px; cursor:pointer;">✕</button>
+        <h3>Chi tiết đơn hàng #${orderId}</h3>
+        <div id="modal-order-content">Đang tải...</div>
+      </div>`;
+    document.body.appendChild(modal);
+    // Gọi API và render vào #modal-order-content (tương tự)
+    // ...
+  }
 function showPaymentSuccessModal() {
     // 1. Kiểm tra nếu modal chưa tồn tại thì tự tạo mới bằng JS
     let modal = document.getElementById('successModal');
-    
+
     if (!modal) {
         console.log("🛠 Modal không có sẵn, đang tự khởi tạo...");
         modal = document.createElement('div');
@@ -1947,14 +2495,14 @@ function showPaymentSuccessModal() {
         });
 
         modal.innerHTML = `
-            <div style="width: 80px; height: 80px; background: #4CAF50; border-radius: 50%; 
-                        display: flex; align-items: center; justify-content: center; 
+            <div style="width: 80px; height: 80px; background: #4CAF50; border-radius: 50%;
+                        display: flex; align-items: center; justify-content: center;
                         box-shadow: 0 8px 20px rgba(76,175,80,0.3); animation: scaleIn 0.5s ease">
                 <span style="color: white; font-size: 50px;">✓</span>
             </div>
             <h2 style="color: #4CAF50; margin-top: 25px; margin-bottom: 10px;">Thanh toán thành công!</h2>
             <p style="color: #666; margin-bottom: 20px;">Cảm ơn bạn đã ủng hộ shop.</p>
-            <p id="redirectText" style="font-weight: bold; color: #333; background: #f0f0f0; 
+            <p id="redirectText" style="font-weight: bold; color: #333; background: #f0f0f0;
                                         padding: 12px 25px; border-radius: 50px; min-width: 250px; text-align: center;">
                 Đang quay lại trang chủ trong 5 giây...
             </p>
@@ -1967,29 +2515,91 @@ function showPaymentSuccessModal() {
 
     // 2. Hiển thị Modal
     modal.style.display = 'flex';
-    
+
     // 3. Logic đếm ngược và về trang chủ
     let seconds = 5;
     const textElement = document.getElementById('redirectText');
-    
+
     const interval = setInterval(() => {
         seconds--;
         if (textElement) {
             textElement.innerText = `Đang quay lại trang chủ trong ${seconds} giây...`;
         }
-        
+
         if (seconds <= 0) {
             clearInterval(interval);
             // Về thẳng trang chủ
-            window.location.href = 'index.html'; 
+            window.location.href = 'index.html';
         }
     }, 1000);
 }
 // Hàm chuyển sang tab Đơn hàng
+
+async function fetchAndRenderOrderDetail(orderId) {
+    // Cập nhật mã đơn hiển thị
+    const codeEl = document.getElementById('detail-order-code');
+    if (codeEl) codeEl.textContent = `#${orderId}`;
+
+    try {
+        const response = await fetch(`${API_BASE}api/users/orders/${orderId}`, {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!response.ok) throw new Error('Không thể tải dữ liệu đơn hàng');
+        const order = await response.json();
+        renderOrderDetailUI(order);
+    } catch (error) {
+        alert('Lỗi: ' + error.message);
+    }
+}
+function renderOrderDetailUI(order) {
+    const s = getOrderStatusMeta(order.status);
+    document.getElementById('order-status-icon').textContent = s.icon;
+    const textEl = document.getElementById('order-status-text');
+    textEl.textContent = s.text;
+    textEl.style.color = s.color;
+
+    // Địa chỉ
+    const addr = order.address || {};
+    document.getElementById('order-address').textContent = addr.address || 'Chưa có địa chỉ';
+    document.getElementById('order-phone-name').textContent = `${addr.name || ''} - ${addr.phone || ''}`;
+
+    // Sản phẩm
+    const itemsContainer = document.getElementById('order-items-list');
+    let subtotal = 0;
+    if (order.details && order.details.length > 0) {
+        itemsContainer.innerHTML = order.details.map(item => {
+            subtotal += item.price * item.quantity;
+            return `
+                <div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0;">
+                    <img src="${item.image || 'https://via.placeholder.com/80'}" alt="${item.productName}" style="width:80px; height:80px; border-radius:8px; object-fit:cover;" onerror="this.src='https://via.placeholder.com/80'">
+                    <div style="flex:1;">
+                        <div style="font-size:14px; font-weight:500;">${item.productName}</div>
+                        <div style="font-size:13px; color:#888;">${item.price?.toLocaleString('vi-VN')}₫</div>
+                    </div>
+                    <div style="font-weight:600; min-width:60px; text-align:right;">x${item.quantity}</div>
+                </div>`;
+        }).join('');
+    } else {
+        itemsContainer.innerHTML = '<p style="color:#888;">Không có sản phẩm</p>';
+    }
+
+    // Tổng tiền
+    document.getElementById('order-subtotal').textContent = `${subtotal.toLocaleString('vi-VN')}₫`;
+    const discount = order.discount || 0;
+    document.getElementById('order-discount').textContent = `-${discount.toLocaleString('vi-VN')}₫`;
+    const total = order.amount || (subtotal - discount);
+    document.getElementById('order-total').textContent = `${total.toLocaleString('vi-VN')}₫`;
+
+    // Phương thức
+    document.getElementById('order-payment-method').textContent = order.paymentMethod || 'Không rõ';
+    document.getElementById('order-delivery-method').textContent = order.method === 'delivery' ? 'Giao hàng tận nơi' : 'Nhận tại cửa hàng';
+}
+//load pd
 function activateOrderTab(event) {
     document.getElementById('tab-info').style.display = 'none';
     document.getElementById('tab-orders').style.display = 'flex';
-    
+
     // Cập nhật class active cho menu
     updateActiveMenu(event);
 
@@ -2001,7 +2611,7 @@ function activateOrderTab(event) {
 function activateInfoTab(event) {
     document.getElementById('tab-info').style.display = 'flex';
     document.getElementById('tab-orders').style.display = 'none';
-    
+
     // Cập nhật class active cho menu
     updateActiveMenu(event);
 }
@@ -2035,43 +2645,49 @@ async function loadOrderHistory() {
         let htmlContent = '';
         orders.forEach(order => {
             // 1. Logic xác định trạng thái
-            let isCompleted = (order.status === 'CONFIRMED' || order.status === 'PAID' || order.status === 'CANCELLED');
+            const statusKey = normalizeOrderStatus(order.status);
+            let isCompleted = isCompletedOrderStatus(order.status) || statusKey === 'cancelled';
             let itemClass = isCompleted ? 'completed-order' : '';
-            
+
             // Các biến trạng thái cũ
             let statusText = 'ĐANG XỬ LÝ';
             let statusColor = '#36bcda';
             let icon = 'local_shipping';
             let iconClass = '';
-        
-            if (order.status === 'CONFIRMED' || order.status === 'PAID') {
+
+            if (statusKey === 'confirmed' || statusKey === 'paid') {
+                statusText = 'ĐÃ XÁC NHẬN';
+                statusColor = 'var(--on-surface-variant)';
+                iconClass = 'completed';
+                icon = 'check_circle';
+            } else if (isCompletedOrderStatus(order.status)) {
                 statusText = 'ĐÃ HOÀN THÀNH';
                 statusColor = 'var(--on-surface-variant)';
                 iconClass = 'completed';
                 icon = 'check_circle';
-            } else if (order.status === 'CANCELLED') {
+            } else if (statusKey === 'cancelled') {
                 statusText = 'ĐÃ HỦY';
-                statusColor = '#ff4d4f'; 
-                iconClass = 'completed'; 
+                statusColor = '#ff4d4f';
+                iconClass = 'completed';
                 icon = 'cancel';
             }
-        
+
             // 2. Lấy hình ảnh (Dùng API_BASE kết hợp với imageUrl)
             const firstProduct = order.orderDetails?.[0]?.product;
-            const imgFilename = firstProduct?.images?.[0]?.imageUrl; 
+            const imgFilename = firstProduct?.images?.[0]?.imageUrl;
             console.log(imgFilename);
             const imgSrc = imgFilename ? `${API_BASE}${imgFilename}` : '../default-tea.png';
-        
+
             const productDesc = firstProduct?.productName || "Đơn hàng Bingchun";
             const moreItems = order.orderDetails?.length > 1 ? ` và ${order.orderDetails.length - 1} món khác` : "";
-        
+
             // 3. Render HTML
             htmlContent += `
-                <div class="order-item ${itemClass}">
+                <div style="cursor:pointer" class="order-item ${itemClass}" onclick="openOrderDetailModal(${order.orderId})">
                     <div class="order-left">
                         <div class="order-icon-box ${iconClass}">
-                            ${imgFilename 
-                                ? `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain; border-radius:1rem;">` 
+                            ${imgFilename
+                                ? `<img src="${imgSrc}" style="width:100%; height:100%; object-fit:contain; border-radius:1rem;">`
                                 : `<span class="material-symbols-outlined">${icon}</span>`
                             }
                         </div>

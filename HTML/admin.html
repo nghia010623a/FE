@@ -94,8 +94,8 @@ body::before{
   border:2px solid var(--border-g);
 }
 .user-info{flex:1}
-.user-name{font-size:13px;font-weight:700;color:var(--text-dark)}
-.user-role{font-size:11px;color:var(--text-light)}
+.user-name{font-size:16px;font-weight:700;color:var(--text-dark)}
+.user-role{font-size:14px;color:var(--text-light)}
 .logout-btn{
   background:rgba(255,255,255,0.3);border:none;
   border-radius:8px;padding:6px 8px;cursor:pointer;
@@ -183,15 +183,15 @@ body::before{
 
 /* TABLE */
 .table-wrap{overflow-x:auto;border-radius:var(--radius-sm)}
-table{width:100%;border-collapse:collapse;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:136x}
 thead tr{background:rgba(255,255,255,0.4);border-bottom:1px solid var(--border-g)}
-thead th{padding:10px 14px;text-align:left;font-weight:700;color:var(--text-mid);font-size:12px;letter-spacing:0.3px}
+thead th{padding:10px 14px;text-align:left;font-weight:700;color:var(--text-mid);font-size:15px;letter-spacing:0.3px}
 tbody tr{border-bottom:1px solid rgba(255,255,255,0.3);transition:0.15s}
 tbody tr:hover{background:rgba(255,255,255,0.3)}
 tbody td{padding:10px 14px;color:var(--text-dark)}
 .status-pill{
   display:inline-flex;align-items:center;gap:4px;
-  padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;
+  padding:3px 10px;border-radius:99px;font-size:14px;font-weight:700;
 }
 .pill-green{background:rgba(34,197,94,0.15);color:#15803d}
 .pill-red{background:rgba(239,68,68,0.15);color:#b91c1c}
@@ -258,7 +258,7 @@ tbody td{padding:10px 14px;color:var(--text-dark)}
 .toast{
   background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);
   border:1px solid var(--border-g);border-radius:12px;
-  padding:12px 16px;font-size:13px;font-weight:600;color:var(--text-dark);
+  padding:12px 16px;font-size:16px;font-weight:600;color:var(--text-dark);
   box-shadow:0 8px 24px rgba(14,165,233,0.2);
   animation:toastIn 0.3s ease;display:flex;align-items:center;gap:8px;min-width:220px;
   transition:opacity 0.3s,transform 0.3s;
@@ -812,8 +812,9 @@ textarea.form-control{resize:vertical;min-height:80px}
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toasts"></div>
 <script src="../JS/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script src="../JS/index.js"></script>
-
 <script src="../JS/admin.js" defer></script>
 </body>
 </html>

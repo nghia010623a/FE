@@ -674,7 +674,25 @@
             justify-content: space-between;
             align-items: center;
         }
-
+        #order-items-list .order-item {
+  display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #f0f0f0;
+}
+#order-items-list .order-item:last-child { border-bottom:none; }
+.order-item-img {
+  width:80px; height:80px; border-radius:8px; object-fit:cover; background:#f5f5f5;
+}
+.order-item-info {
+  flex:1;
+}
+.order-item-name {
+  font-size:14px; font-weight:500; margin-bottom:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.order-item-price {
+  font-size:13px; color:#888;
+}
+.order-item-quantity {
+  text-align:right; font-size:14px; font-weight:600; min-width:60px;
+}
         .item-price {
             font-size: 1.2rem;
             font-weight: 800;
@@ -1012,6 +1030,7 @@
         </div>
 <img alt="Bingchun Mascot" src="https://lh3.googleusercontent.com/aida/ADBb0uiVhHFXvryTNO2hd7c2GLyozzIagaMkzetU_ER7nAIE7nGx2kGxnMugaMD-L-HIe6M8abuBqc2xrsUL9wFMwCVOH23_ZIzezEPKkuoiIRkrutD1gV4V6N2e4k_mUSTK_B8jwXVh13BqPB65nTjamx_B2lbfirGF9CWLVRkl2YnS_zZU8mz5YfZNmsm0qrNjHgK4ChZwHQyAheBHjpAhDflMRvlQfaPFIqNJvYtavXRM9kWyhcGbd7y7hcvY8uWuRYjYJroFmrbE7FE" style="width: 100%; height: auto; drop-shadow: 0 5px 15px rgba(0,0,0,0.2);"/>
 </div>
+
 <!-- Plain JS for Canvas Background Animation -->
 <script>
         const canvas = document.getElementById('boba-canvas');
