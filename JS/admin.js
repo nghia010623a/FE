@@ -653,11 +653,25 @@ async function renderReviews(filter) {
       <td>${stars(r.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.content}</td>
       <td>${statusPill(r.active?'active':'inactive')}</td>
       <td><div class="flex">
+        <button class="btn btn-glass btn-sm btn-icon" title="Trả lời" onclick="replyReview(${r.id})"><i class="ti ti-message-reply"></i></button>
         <button class="btn btn-sm btn-icon" style="background:rgba(14,165,233,0.1);color:var(--lb5)" onclick="toggleReview(${r.id})"><i class="ti ti-${r.active?'eye-off':'eye'}"></i></button>
         <button class="btn btn-danger btn-sm btn-icon" onclick="deleteReview(${r.id})"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`).join('');
     document.getElementById('rv-badge').textContent = reviews.length;
+  } catch (e) {}
+}
+
+async function replyReview(id) {
+  const content = prompt('Nhập nội dung trả lời đánh giá:');
+  if (!content || !content.trim()) return;
+  try {
+    await apiRequest(`api/reviews/${id}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content: content.trim() })
+    });
+    toast('Đã trả lời đánh giá', 'success');
+    renderReviews(currentReviewFilter);
   } catch (e) {}
 }
 
@@ -813,14 +827,21 @@ function resetIngredientForm() {
 //  AUDIT LOGS
 // ============================================================
 async function renderLogs() {
+  const tbody = document.getElementById('log-table');
+  if (!tbody) return;
   try {
     const logs = await apiRequest('api/logs');
-    if (!logs) return;
-    document.getElementById('log-table').innerHTML = logs.map(l => `<tr>
-      <td>#${l.id}</td><td><span class="status-pill pill-blue">${l.account||'admin'}</span></td>
-      <td>${l.action}</td><td style="color:var(--text-light);font-size:12px">${l.time||l.createdAt}</td>
+    if (!logs || !logs.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light);padding:24px">Chưa có nhật ký hoạt động</td></tr>';
+      return;
+    }
+    tbody.innerHTML = logs.map(l => `<tr>
+      <td>#${l.id}</td><td><span class="status-pill pill-blue">${l.account||'system'}</span></td>
+      <td>${l.action}</td><td style="color:var(--text-light);font-size:12px">${l.time||l.createdAt||''}</td>
     </tr>`).join('');
-  } catch (e) {}
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:24px">Không tải được nhật ký</td></tr>';
+  }
 }
 
 // ============================================================

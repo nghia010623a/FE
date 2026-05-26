@@ -8,6 +8,9 @@
 // import API_BASE from "./config.js";
 let stompClient1 = null;
 let userNotifications = [];
+let userPointBalance = Number(localStorage.getItem("userPointBalance") || 0);
+let usePointsForOrder = false;
+let myReviewedProductIds = new Set();
 
 function getCurrentUser() {
     try {
@@ -288,6 +291,8 @@ async function getDetailAccount() {
         if (!res.ok) throw new Error(`Lỗi HTTP: ${res.status}`);
 
         const data = await res.json();
+        userPointBalance = Number(data.point || 0);
+        localStorage.setItem("userPointBalance", String(userPointBalance));
 
         const fields = {
             "username": data.username,
@@ -313,6 +318,14 @@ async function getDetailAccount() {
 
         const welcomeName = document.getElementById("welcomeName");
         if (welcomeName) welcomeName.innerText = data.username || "Bạn";
+
+        const pointValue = document.getElementById("point-value");
+        if (pointValue) pointValue.textContent = `${userPointBalance.toLocaleString('vi-VN')}đ`;
+        const nextRank = document.getElementById("point-next-rank");
+        if (nextRank) {
+            const remain = Math.max(0, 1000 - userPointBalance);
+            nextRank.textContent = remain > 0 ? `Còn ${remain.toLocaleString('vi-VN')} điểm để lên hạng Kim Cương` : 'Bạn đã đạt hạng Kim Cương';
+        }
 
     } catch (err) {
         console.error("Lỗi trong hàm getDetailAccount:", err);
@@ -714,9 +727,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     maintainNav();
     refreshToken();
-
-    // Gắn logic menu ở trang chủ/menu lần đầu
-    // initDynamicMenu();
+    initAiChatWidget();
 });
 
 window.onpopstate = function () {
@@ -806,7 +817,7 @@ async function initDynamicMenu() {
         const fullImageUrl = API_BASE+`${item.imageUrl}`;
 
         return `
-<div style="cursor:pointer;box-shadow:inset 0 8px 32px 0 white" class="group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between
+<div data-product-id="${item.productId}" style="cursor:pointer;box-shadow:inset 0 8px 32px 0 white" class="product-card group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between
                 border-2 border-transparent hover:border-blue-600 hover:shadow-2xl transition-all duration-500">
 
                 <div class="absolute top-2 left-2 w-16 h-16 z-20
@@ -837,7 +848,7 @@ async function initDynamicMenu() {
                     ${item.productName}
                 </h3>
 
-                <div style="cursor:pointer" class="flex items-center gap-2 mb-3">
+                <div data-no-detail="1" onclick="event.stopPropagation(); openProductReviewsModal(${item.productId})" title="Xem đánh giá" style="cursor:pointer" class="flex items-center gap-2 mb-3">
                     ${renderStars(item.rating)}
                     <span class="text-xs text-on-surface-variant">
                         ${(item.rating).toFixed(1)}
@@ -901,6 +912,258 @@ async function initDynamicMenu() {
     renderContent("all");
 }
 
+function simpleStarText(rating) {
+    const n = Math.max(0, Math.min(5, Number(rating || 0)));
+    return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+async function openProductReviewsModal(productId) {
+    const old = document.getElementById('product-reviews-modal');
+    if (old) old.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'product-reviews-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:100000;display:flex;align-items:flex-start;justify-content:center;padding:48px 16px;';
+    modal.innerHTML = `
+      <div style="width:min(620px,100%);max-height:82vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.28);">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid #e2e8f0;">
+          <div style="font-weight:800;font-size:18px;color:#0f172a;">Đánh giá sản phẩm</div>
+          <button onclick="document.getElementById('product-reviews-modal')?.remove()" style="border:0;background:transparent;font-size:24px;cursor:pointer;color:#64748b;">×</button>
+        </div>
+        <div id="product-reviews-content" style="padding:16px;">
+          <div style="text-align:center;color:#94a3b8;padding:28px;">Đang tải đánh giá...</div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    const content = document.getElementById('product-reviews-content');
+    try {
+        const res = await fetch(`${API_BASE}api/users/products/${productId}/reviews`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Không tải được đánh giá');
+        const reviews = await res.json();
+        if (!reviews.length) {
+            content.innerHTML = '<div style="text-align:center;color:#64748b;padding:28px;">Sản phẩm chưa có đánh giá.</div>';
+            return;
+        }
+        content.innerHTML = reviews.map(r => `
+          <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;background:#f8fafc;">
+            <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;">
+              <strong style="color:#0f172a;">${r.username || 'Người dùng'}</strong>
+              <span style="color:#f59e0b;font-size:13px;">${simpleStarText(r.rating)}</span>
+            </div>
+            <div style="font-size:14px;color:#334155;line-height:1.45;">${r.content || ''}</div>
+            ${(r.replies || []).map(reply => `
+              <div style="margin-top:10px;margin-left:16px;padding:10px;border-left:3px solid #0ea5e9;background:white;border-radius:10px;">
+                <div style="font-weight:800;color:#0369a1;font-size:13px;">Admin ${reply.username || ''}</div>
+                <div style="font-size:13px;color:#334155;margin-top:3px;">${reply.content || ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('');
+    } catch (error) {
+        content.innerHTML = `<div style="text-align:center;color:#dc2626;padding:28px;">${error.message}</div>`;
+    }
+}
+
+async function openProductDetailModal(productId) {
+    const old = document.getElementById('product-detail-modal');
+    if (old) old.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'product-detail-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:100001;background:rgba(15,23,42,.42);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px 14px;overflow:auto;';
+    modal.innerHTML = `
+      <div style="width:min(920px,100%);max-height:92vh;overflow:auto;border-radius:28px;background:rgba(255,255,255,.22);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.45);box-shadow:0 30px 80px rgba(15,23,42,.25);">
+        <div id="product-detail-body" style="padding:28px;text-align:center;color:#64748b;">Đang tải sản phẩm...</div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+    try {
+        const res = await fetch(`${API_BASE}api/users/products/${productId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Không tải được chi tiết sản phẩm');
+        const p = await res.json();
+
+        const images = (p.images && p.images.length) ? p.images : (p.imageUrl ? [p.imageUrl] : []);
+        const mainImg = images[0] ? (API_BASE + images[0]) : '../binglogo.png';
+        const thumbs = images.map(u => API_BASE + u);
+        const stock = p.stockQuantity != null ? p.stockQuantity : 99;
+        const maxQty = Math.max(1, Math.min(stock, 99));
+
+        document.getElementById('product-detail-body').innerHTML = `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+            <div>
+              <button onclick="document.getElementById('product-detail-modal')?.remove()" style="position:absolute;right:24px;top:20px;border:0;background:rgba(255,255,255,.5);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:22px;color:#334155;">×</button>
+              <div style="background:rgba(255,255,255,.35);border-radius:22px;padding:18px;border:1px solid rgba(255,255,255,.5);">
+                <img id="pd-main-img" src="${mainImg}" alt="${p.productName}" style="width:100%;aspect-ratio:1;object-fit:contain;border-radius:16px;background:rgba(248,250,252,.6);"/>
+                <div style="display:flex;gap:10px;margin-top:12px;overflow-x:auto;">
+                  ${thumbs.map((src, i) => `
+                    <img src="${src}" onclick="document.getElementById('pd-main-img').src='${src}'"
+                      style="width:64px;height:64px;object-fit:cover;border-radius:12px;cursor:pointer;border:2px solid ${i===0?'#0ea5e9':'transparent'};background:#fff;"/>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+            <div style="text-align:left;color:#0f172a;">
+              <div style="font-size:12px;color:#0369a1;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">${p.category || 'BingChun'}</div>
+              <h2 style="font-size:28px;font-weight:900;line-height:1.2;margin-bottom:8px;">${p.productName}</h2>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                <span style="color:#f59e0b;font-size:14px;">${simpleStarText(p.rating)}</span>
+                <span style="font-size:13px;color:#64748b;">${Number(p.rating || 0).toFixed(1)}</span>
+              </div>
+              <div style="font-size:32px;font-weight:900;color:#006977;margin-bottom:14px;">${Number(p.price).toLocaleString('vi-VN')}đ</div>
+              <p style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:16px;">${p.description || 'Món kem trà sữa đặc biệt từ BingChun.'}</p>
+              <div style="font-size:13px;color:#334155;margin-bottom:18px;">
+                <strong>Còn lại:</strong> <span id="pd-stock">${stock}</span> phần
+              </div>
+              ${(p.ingredients && p.ingredients.length) ? `
+                <div style="margin-bottom:18px;font-size:13px;color:#475569;">
+                  <strong>Thành phần:</strong>
+                  <ul style="margin-top:6px;padding-left:18px;">
+                    ${p.ingredients.map(ing => `<li>${ing.name}${ing.quantity ? ` (${ing.quantity}${ing.unit ? ' ' + ing.unit : ''})` : ''}</li>`).join('')}
+                  </ul>
+                </div>` : ''}
+              <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+                <span style="font-weight:700;font-size:14px;">Số lượng</span>
+                <div style="display:flex;align-items:center;background:rgba(255,255,255,.45);border-radius:14px;border:1px solid rgba(255,255,255,.6);overflow:hidden;">
+                  <button id="pd-qty-minus" style="width:40px;height:40px;border:0;background:transparent;font-size:20px;cursor:pointer;">−</button>
+                  <input id="pd-qty" type="number" min="1" max="${maxQty}" value="1" style="width:48px;text-align:center;border:0;background:transparent;font-weight:700;"/>
+                  <button id="pd-qty-plus" style="width:40px;height:40px;border:0;background:transparent;font-size:20px;cursor:pointer;">+</button>
+                </div>
+              </div>
+              <button id="pd-add-cart" style="width:100%;padding:14px 18px;border:0;border-radius:16px;background:linear-gradient(135deg,#38bdf8,#006977);color:#fff;font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 12px 30px rgba(0,105,119,.25);">
+                Thêm vào giỏ hàng
+              </button>
+            </div>
+          </div>`;
+
+        const qtyInput = document.getElementById('pd-qty');
+        document.getElementById('pd-qty-minus').onclick = () => {
+            qtyInput.value = Math.max(1, Number(qtyInput.value) - 1);
+        };
+        document.getElementById('pd-qty-plus').onclick = () => {
+            qtyInput.value = Math.min(maxQty, Number(qtyInput.value) + 1);
+        };
+        document.getElementById('pd-add-cart').onclick = async () => {
+            const qty = Math.min(maxQty, Math.max(1, Number(qtyInput.value) || 1));
+            const img = document.getElementById('pd-main-img');
+            const cartIcon = document.getElementById('cart-icon');
+            animateFlyToCart(img, cartIcon);
+            await addToCartApi(productId, qty);
+            modal.remove();
+        };
+
+        if (window.innerWidth < 768) {
+            const grid = document.querySelector('#product-detail-body > div');
+            if (grid) grid.style.gridTemplateColumns = '1fr';
+        }
+    } catch (err) {
+        document.getElementById('product-detail-body').innerHTML =
+            `<div style="padding:40px;color:#dc2626;">${err.message}</div>`;
+    }
+}
+
+document.addEventListener('click', (e) => {
+    const card = e.target.closest('.product-card');
+    if (!card) return;
+    if (e.target.closest('.add-to-cart-btn') || e.target.closest('[data-no-detail]')) return;
+    const productId = card.getAttribute('data-product-id');
+    if (productId) openProductDetailModal(productId);
+});
+
+function initAiChatWidget() {
+    if (document.getElementById('bingchun-ai-widget')) return;
+
+    const widget = document.createElement('div');
+    widget.id = 'bingchun-ai-widget';
+    widget.innerHTML = `
+      <style>
+        #bingchun-ai-panel { display:none; position:fixed; right:20px; bottom:88px; width:min(380px,calc(100vw - 32px)); height:min(520px,70vh);
+          border-radius:22px; background:rgba(255,255,255,.2); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.45);
+          box-shadow:0 24px 60px rgba(15,23,42,.22); z-index:99998; flex-direction:column; overflow:hidden; }
+        #bingchun-ai-panel.open { display:flex; }
+        #bingchun-ai-messages { flex:1; overflow:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+        .ai-msg { max-width:88%; padding:10px 12px; border-radius:14px; font-size:13px; line-height:1.45; }
+        .ai-msg.bot { align-self:flex-start; background:rgba(255,255,255,.55); color:#0f172a; }
+        .ai-msg.user { align-self:flex-end; background:linear-gradient(135deg,#38bdf8,#006977); color:#fff; }
+        #bingchun-ai-fab { position:fixed; right:20px; bottom:20px; width:58px; height:58px; border-radius:50%; border:0; cursor:pointer;
+          background:linear-gradient(135deg,#7dd3fc,#006977); color:#fff; font-size:26px; box-shadow:0 12px 30px rgba(0,105,119,.35); z-index:99999; }
+      </style>
+      <button id="bingchun-ai-fab" title="Tư vấn AI BingChun">✦</button>
+      <div id="bingchun-ai-panel">
+        <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.35);display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:800;color:#0369a1;">BingChun AI</div>
+            <div style="font-size:11px;color:#64748b;">RAG + Ollama — gợi ý món phù hợp</div>
+          </div>
+          <button id="bingchun-ai-close" style="border:0;background:transparent;font-size:22px;cursor:pointer;color:#64748b;">×</button>
+        </div>
+        <div id="bingchun-ai-messages">
+          <div class="ai-msg bot">Xin chào! Bạn muốn món kem/trà sữa ngọt, béo hay thanh mát? Mình sẽ gợi ý từ menu BingChun nhé.</div>
+        </div>
+        <div style="padding:10px;border-top:1px solid rgba(255,255,255,.35);display:flex;gap:8px;">
+          <input id="bingchun-ai-input" placeholder="VD: món ít ngọt dưới 50k..." style="flex:1;border:1px solid rgba(255,255,255,.5);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.35);outline:none;"/>
+          <button id="bingchun-ai-send" style="border:0;border-radius:12px;padding:0 14px;background:#006977;color:#fff;font-weight:700;cursor:pointer;">Gửi</button>
+        </div>
+      </div>`;
+    document.body.appendChild(widget);
+
+    const panel = document.getElementById('bingchun-ai-panel');
+    const messages = document.getElementById('bingchun-ai-messages');
+    const input = document.getElementById('bingchun-ai-input');
+
+    const appendMsg = (text, who) => {
+        const div = document.createElement('div');
+        div.className = 'ai-msg ' + who;
+        div.textContent = text;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    };
+
+    const sendAi = async () => {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        appendMsg(text, 'user');
+        appendMsg('Đang suy nghĩ...', 'bot');
+        const loading = messages.lastElementChild;
+        try {
+            const res = await fetch(API_BASE + 'api/users/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
+            loading.remove();
+            appendMsg(data.reply || 'Không có phản hồi', 'bot');
+            if (data.sources) {
+                const hint = document.createElement('div');
+                hint.className = 'ai-msg bot';
+                hint.style.fontSize = '11px';
+                hint.style.opacity = '0.85';
+                hint.textContent = 'Gợi ý từ: ' + data.sources;
+                messages.appendChild(hint);
+            }
+        } catch {
+            loading.remove();
+            appendMsg('Không kết nối được AI. Hãy chạy Ollama (llama3.2) trên server.', 'bot');
+        }
+    };
+
+    document.getElementById('bingchun-ai-fab').onclick = () => panel.classList.toggle('open');
+    document.getElementById('bingchun-ai-close').onclick = () => panel.classList.remove('open');
+    document.getElementById('bingchun-ai-send').onclick = sendAi;
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') sendAi(); });
+}
+
 // ==========================================
 // LOGIC GIỎ HÀNG & API
 // ==========================================
@@ -951,16 +1214,10 @@ function animateFlyToCart(imgElement, cartElement) {
 
 // 2. Hàm CALL API POST để lưu vào giỏ hàng trên Server
 // Viết dạng async để xử lý bất đồng bộ
-async function addToCartApi(productId) {
-    // --- CẤU HÌNH API CỦA BẠN TẠI ĐÂY ---
-
-    // Nếu API cần Token đăng nhập, lấy nó từ localStorage hoặc biến global
-    const token = localStorage.getItem('userToken');
-
-    // Dữ liệu body gửi lên, thường API cần productId và quantity
+async function addToCartApi(productId, quantity = 1) {
     const bodyData = {
         productId: Number(productId),
-        quantity: 1
+        quantity: Math.max(1, Number(quantity) || 1)
     };
 
     try {
@@ -989,7 +1246,7 @@ async function addToCartApi(productId) {
         const badge = document.getElementById('cart-count');
         if (badge) {
             const current = parseInt(badge.innerText) || 0;
-            updateCartBadgeUI(current + 1);
+            updateCartBadgeUI(current + bodyData.quantity);
         }
 
         return text;
@@ -1083,6 +1340,7 @@ async function loadCartFromServer() {
 
         // Cực kỳ quan trọng: Thêm thuộc tính isSelected mặc định là true cho mỗi sản phẩm
         cartData = data.map(item => ({ ...item, isSelected: true }));
+        await getDetailAccount();
 
         renderAll();
     } catch (error) {
@@ -1147,6 +1405,17 @@ let selectedPickup = null, tempPickup = null;
 // ==========================================
 // 2. RENDER TÓM TẮT ĐƠN HÀNG
 // ==========================================
+function getPointDiscount(subtotal, shippingFee, voucherDiscount) {
+    if (!usePointsForOrder) return 0;
+    const payable = Math.max(0, subtotal + shippingFee - voucherDiscount);
+    return Math.min(userPointBalance, payable);
+}
+
+window.togglePointRedeem = function() {
+    usePointsForOrder = !usePointsForOrder;
+    renderOrderSummary(cartData);
+};
+
 function renderOrderSummary(products) {
     const summaryContainer = document.querySelector('.order-summary');
     if (!summaryContainer) return;
@@ -1165,8 +1434,10 @@ function renderOrderSummary(products) {
         }
     }
 
-    // Tính total SAU khi đã có discount
-    const total = subtotal + shippingFee - discount;
+    const pointDiscount = getPointDiscount(subtotal, shippingFee, discount);
+
+    // Tính total SAU khi đã có discount và điểm đổi
+    const total = subtotal + shippingFee - discount - pointDiscount;
 
     let addrLabel = '<span style="color:#aaa">Chọn địa chỉ giao hàng</span>';
     if (selectedAddr) {
@@ -1246,10 +1517,22 @@ function renderOrderSummary(products) {
             <span class="material-symbols-outlined" style="color:#aaa">chevron_right</span>
         </div>
 
+        <div onclick="togglePointRedeem()" class="selector-dashed" style="${userPointBalance <= 0 ? 'opacity:.55;pointer-events:none' : ''}">
+            <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <span class="material-symbols-outlined" style="color:var(--primary)">stars</span>
+                <span style="font-size:13px">
+                    Đổi điểm (${userPointBalance.toLocaleString('vi-VN')} điểm)
+                    <b style="color:${usePointsForOrder?'var(--primary)':'#888'}">${usePointsForOrder ? `- ${pointDiscount.toLocaleString('vi-VN')}đ` : 'Chưa dùng'}</b>
+                </span>
+            </div>
+            <span class="material-symbols-outlined" style="color:${usePointsForOrder?'var(--primary)':'#aaa'}">${usePointsForOrder?'check_circle':'radio_button_unchecked'}</span>
+        </div>
+
         <div class="summary-row"><span>Tạm tính</span><strong>${subtotal.toLocaleString('vi-VN')}đ</strong></div>
         ${deliveryMode === 'ship' ? `
         <div class="summary-row"><span>Phí vận chuyển</span><strong>${shippingFee.toLocaleString('vi-VN')}đ</strong></div>` : ''}
         <div class="summary-row" style="color:red"><span>Giảm giá</span><strong>-${discount.toLocaleString('vi-VN')}đ</strong></div>
+        ${pointDiscount > 0 ? `<div class="summary-row" style="color:#0f766e"><span>Đổi điểm</span><strong>-${pointDiscount.toLocaleString('vi-VN')}đ</strong></div>` : ''}
         <div class="summary-row total"><span>Tổng cộng</span><span class="total-price">${total.toLocaleString('vi-VN')}đ</span></div>
         <button class="checkout-btn" ${subtotal===0?'disabled':''} style="${subtotal===0?'opacity:.5;cursor:not-allowed;':''}">
             Thanh toán ngay
@@ -1780,7 +2063,8 @@ function buildOrderPayload() {
         if (appliedVoucher.percent) discount = Math.round(subtotal * appliedVoucher.percent / 100);
         else if (appliedVoucher.value) discount = appliedVoucher.value;
     }
-    const total = subtotal + shippingFee - discount;
+    const pointsUsed = getPointDiscount(subtotal, shippingFee, discount);
+    const total = subtotal + shippingFee - discount - pointsUsed;
 
     // orderCode phải là số, dùng timestamp giảm bớt cho vừa int Java
     const orderCode = Math.floor(Date.now() / 1000); // Unix timestamp (số nhỏ hơn)
@@ -1801,6 +2085,7 @@ function buildOrderPayload() {
         subtotal,
         shippingFee,
         discount,
+        pointsUsed,
         total
     };
 }
@@ -1838,6 +2123,10 @@ document.addEventListener('click', async (e) => {
 
         const order = await resOrder.json();
         const realOrderCode = order.orderCode; // ID thật từ MySQL (Ví dụ: 125)
+        if (typeof order.currentPoint === 'number') {
+            userPointBalance = order.currentPoint;
+            localStorage.setItem("userPointBalance", String(userPointBalance));
+        }
 
         console.log(">>> Đã lưu DB, Mã đơn hàng thật là:", realOrderCode);
 
@@ -2102,7 +2391,29 @@ function getOrderStatusMeta(status) {
     return map[normalizeOrderStatus(status)] || map.pending;
 }
 
+async function loadMyReviewedProductIds() {
+    try {
+        const res = await fetch(`${API_BASE}api/users/reviews/mine`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) return myReviewedProductIds;
+        const ids = await res.json();
+        myReviewedProductIds = new Set((ids || []).map(Number));
+    } catch (e) {
+        console.error('Không tải được trạng thái đánh giá:', e);
+    }
+    return myReviewedProductIds;
+}
+
 function reviewFormHtml(orderId, productId) {
+    if (myReviewedProductIds.has(Number(productId))) {
+        return `
+          <div style="margin-top:10px;background:#ecfdf5;border:1px solid #bbf7d0;border-radius:10px;padding:10px;color:#15803d;font-size:13px;font-weight:700;" onclick="event.stopPropagation()">
+            Bạn đã đánh giá sản phẩm này.
+          </div>`;
+    }
     return `
       <div id="review-box-${orderId}-${productId}" style="margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px;" onclick="event.stopPropagation()">
         <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:#0f172a;">Đánh giá sản phẩm</div>
@@ -2141,6 +2452,7 @@ async function submitProductReview(orderId, productId) {
         if (box) {
             box.innerHTML = '<div style="color:#15803d;font-weight:700;font-size:13px;">Cảm ơn bạn đã đánh giá sản phẩm.</div>';
         }
+        myReviewedProductIds.add(Number(productId));
         showUserNotificationToast({ title: 'Đã gửi đánh giá', content: 'Đánh giá của bạn đã được ghi nhận.' });
     } catch (error) {
         if (box) {
@@ -2229,6 +2541,7 @@ function openOrderDetailModal(orderId) {
       }
 
       const order = await res.json();
+      await loadMyReviewedProductIds();
       renderOrderDetailInModal(order);
     } catch (error) {
       content.innerHTML = `<div style="text-align:center;padding:40px;color:#e00;">

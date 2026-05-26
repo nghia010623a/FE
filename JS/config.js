@@ -1,3 +1,3 @@
-const API_BASE = "https://actress-yes-samples-resort.trycloudflare.com/";
+const API_BASE = "https://seminars-subsidiary-processing-exam.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd
