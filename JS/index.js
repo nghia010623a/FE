@@ -264,6 +264,8 @@ function initUpdateProfileForm() {
 
             if (response.ok) {
                 window.location.href = "/index.html#home";
+                localStorage.setItem("isUpdateProfile", "true");
+
                         } else if (response.status === 401) {
                 const text = await response.json();
                 showErrorModal(text.message);
@@ -562,6 +564,8 @@ async function loadPage(url) {
     else if (path === "icecream") page = "HTML/icecream.html";
     else if (path === "cart") page = "HTML/cart.html";
     else if (path === "notification") page = "HTML/notification.html";
+    else if (path === "About") page = "HTML/About.html";
+
     else if (path === "order-detail") page = "HTML/orderDetail.html";  // <-- THÊM DÒNG NÀY
 
 
@@ -674,6 +678,24 @@ function handlePostLoadLogic(path) {
         initLocationSelector();
         initAddressAutoFill(); // Gọi hàm mới ở đây
 
+    }
+    if (path === "home")
+    {
+    banner.src = `${API_BASE}tstc1.png`;
+    
+    let pm1 = document.getElementById("pm1");
+    pm1.src = `${API_BASE}ts1.png`;
+    pm1.style.objectFit = "contain";
+        let pm2 = document.getElementById("pm2");
+    pm2.src = `${API_BASE}ttc6.png`;
+    pm2.style.objectFit = "contain";
+    let pm3 = document.getElementById("pm3");
+    pm3.src = `${API_BASE}tstc2.png`;
+    pm3.style.objectFit = "contain";
+    let pm4 = document.getElementById("pm4");
+    pm4.src = `${API_BASE}k3.png`;
+    pm4.style.objectFit = "contain";
+    
     }
     if (path === "order-detail") {
         // Lấy orderId từ biến toàn cục đã lưu ở loadPage
