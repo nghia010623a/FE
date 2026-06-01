@@ -1,3 +1,3 @@
-const API_BASE = "https://anybody-colon-unwrap-graphs.trycloudflare.com/";
+const API_BASE = "https://sie-nova-fee-elimination.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd
