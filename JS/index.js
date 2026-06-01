@@ -334,6 +334,10 @@ async function getDetailAccount() {
     }
 }
 
+function getLoginPagePath() {
+    return window.location.pathname.includes('/HTML/') ? 'login.html' : 'HTML/login.html';
+}
+
 async function logoutService() {
     try {
         const response = await fetch(API_BASE + "api/logout", {
@@ -347,7 +351,7 @@ async function logoutService() {
 
         if (response.ok) {
             localStorage.clear();
-            window.location.href = "HTML/login.html";
+            window.location.href = getLoginPagePath();
         } else {
             const data = await response.json();
             showErrorModal(data.message || "Lỗi khi đăng xuất");
@@ -356,6 +360,75 @@ async function logoutService() {
         console.error("Lỗi kết nối:", error);
         showErrorModal("Không thể kết nối tới server");
     }
+}
+
+async function forceLogoutAfterPasswordChange() {
+    try {
+        await fetch(API_BASE + "api/logout", {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" }
+        });
+    } catch (error) {
+        console.error("Không gọi được logout sau khi đổi mật khẩu:", error);
+    } finally {
+        localStorage.clear();
+        window.location.href = getLoginPagePath();
+    }
+}
+
+function initChangePasswordForm() {
+    const form = document.getElementById("changePasswordForm");
+    if (!form || form.dataset.bound === "true") return;
+    form.dataset.bound = "true";
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const currentPassword = document.getElementById("current-password")?.value.trim();
+        const newPassword = document.getElementById("new-password")?.value.trim();
+        const confirmPassword = document.getElementById("confirm-new-password")?.value.trim();
+        const btn = document.getElementById("change-password-btn");
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            showErrorModal("Vui lòng nhập đầy đủ thông tin mật khẩu");
+            return;
+        }
+        if (newPassword.length < 6) {
+            showErrorModal("Mật khẩu mới phải có ít nhất 6 ký tự");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            showErrorModal("Mật khẩu nhập lại không khớp");
+            return;
+        }
+
+        const oldText = btn ? btn.textContent : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Đang cập nhật...";
+        }
+
+        try {
+            const res = await fetch(API_BASE + "api/change-password", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.message || "Đổi mật khẩu thất bại");
+            }
+            showToast(data.message || "Đổi mật khẩu thành công, vui lòng đăng nhập lại", "success");
+            setTimeout(forceLogoutAfterPasswordChange, 700);
+        } catch (error) {
+            showErrorModal(error.message || "Không thể đổi mật khẩu");
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = oldText;
+            }
+        }
+    });
 }
 
 async function refreshToken() {
@@ -712,6 +785,7 @@ function handlePostLoadLogic(path) {
     if (path.includes("account")) {
         getDetailAccount();
         initAvatarUpload();
+        initChangePasswordForm();
 
         const overlay = document.getElementById("googleOverlay");
         if (overlay && localStorage.getItem("loginWithGoogle") === "true") {
@@ -750,6 +824,11 @@ document.addEventListener("DOMContentLoaded", function() {
     maintainNav();
     refreshToken();
     initAiChatWidget();
+    if (document.getElementById("changePasswordForm")) {
+        getDetailAccount();
+        initAvatarUpload();
+        initChangePasswordForm();
+    }
 });
 
 window.onpopstate = function () {
@@ -1319,6 +1398,7 @@ document.addEventListener('click', async (e) => {
 
 // --- KHỞI TẠO KHI LOAD TRANG ---
 async function initCartBadgeOnLoad() {
+    let dataM = 0;
     try {
 
         const response = await fetch(API_BASE+"api/users/cart", {
@@ -1330,7 +1410,7 @@ async function initCartBadgeOnLoad() {
         });
         console.log(response.status);
         const data = await response.json();
-        let dataM=data.quantity;
+        dataM=data.quantity;
         console.log(dataM);
 
         updateCartBadgeUI(dataM);
@@ -1346,9 +1426,30 @@ async function initCartBadgeOnLoad() {
 initCartBadgeOnLoad();
 let cartData = [];
 
-document.getElementById("cart-icon").addEventListener("click", async () => {
-    await loadCartFromServer();
-});
+const cartIconButton = document.getElementById("cart-icon");
+if (cartIconButton) {
+    cartIconButton.addEventListener("click", async () => {
+        await loadCartFromServer();
+    });
+}
+
+const SIZE_L_SURCHARGE = 10000;
+
+function getCartItemSize(product) {
+    return (product?.size || "M").toUpperCase() === "L" ? "L" : "M";
+}
+
+function getCartItemPrice(product) {
+    const basePrice = Number(product?.price || 0);
+    return basePrice + (getCartItemSize(product) === "L" ? SIZE_L_SURCHARGE : 0);
+}
+
+window.setCartItemSize = (productId, size) => {
+    const item = cartData.find(p => Number(p.productId) === Number(productId));
+    if (!item) return;
+    item.size = size === "L" ? "L" : "M";
+    renderAll();
+};
 
 async function loadCartFromServer() {
     try {
@@ -1361,7 +1462,7 @@ async function loadCartFromServer() {
         const data = await response.json();
 
         // Cực kỳ quan trọng: Thêm thuộc tính isSelected mặc định là true cho mỗi sản phẩm
-        cartData = data.map(item => ({ ...item, isSelected: true }));
+        cartData = data.map(item => ({ ...item, size: item.size || "M", isSelected: true }));
         await getDetailAccount();
 
         renderAll();
@@ -1382,6 +1483,8 @@ function renderCart(products) {
     container.innerHTML = "";
 
     products.forEach(product => {
+        const selectedSize = getCartItemSize(product);
+        const unitPrice = getCartItemPrice(product);
         // Chú ý: Đã đưa item-checkbox-container VÀO TRONG cart-item
         const productHTML = `
             <div class="cart-item glass-deep" data-id="${product.productId}">
@@ -1394,8 +1497,23 @@ function renderCart(products) {
                 <img     style="width: 120px; height: 120px; object-fit: contain;" class="item-img" src="${API_BASE}${product.imageUrl}"/>
                 <div class="item-details">
                     <h3 class="item-title">${product.productName}</h3>
+                    <div class="cart-size-picker" style="display:flex;align-items:center;gap:6px;margin:8px 0 4px">
+                        <span style="font-size:12px;color:#777">Size</span>
+                        <button type="button" onclick="setCartItemSize(${product.productId}, 'M')"
+                            style="height:28px;min-width:38px;border-radius:8px;border:1px solid ${selectedSize === 'M' ? 'var(--primary)' : '#ddd'};
+                                   background:${selectedSize === 'M' ? 'var(--primary)' : 'white'};
+                                   color:${selectedSize === 'M' ? 'white' : '#555'};font-size:12px;font-weight:600;cursor:pointer">
+                            M
+                        </button>
+                        <button type="button" onclick="setCartItemSize(${product.productId}, 'L')"
+                            style="height:28px;min-width:70px;border-radius:8px;border:1px solid ${selectedSize === 'L' ? 'var(--primary)' : '#ddd'};
+                                   background:${selectedSize === 'L' ? 'var(--primary)' : 'white'};
+                                   color:${selectedSize === 'L' ? 'white' : '#555'};font-size:12px;font-weight:600;cursor:pointer">
+                            L +10k
+                        </button>
+                    </div>
                     <div class="item-actions">
-                        <span class="item-price">${product.price.toLocaleString('vi-VN')}đ</span>
+                        <span class="item-price">${unitPrice.toLocaleString('vi-VN')}đ</span>
                         <div class="qty-control">
                             <button class="qty-btn" onclick="updateQty(${product.productId}, -1)">
                                 <span class="material-symbols-outlined">remove</span>
@@ -1421,6 +1539,7 @@ let deliveryMode = 'ship';
 let payMethod = 'cod';              // 'cod' | 'bank'
 let addresses = [];
 let tempAddr = null, selectedAddr = null;
+let editingAddressId = null;
 let vouchers = [], tempVoucher = null, appliedVoucher = null;
 let selectedPickup = null, tempPickup = null;
 
@@ -1443,7 +1562,7 @@ function renderOrderSummary(products) {
     if (!summaryContainer) return;
 
     const selectedItems = products.filter(p => p.isSelected);
-    const subtotal = selectedItems.reduce((sum, p) => sum + (p.price * (p.totalQuantity || 0)), 0);
+    const subtotal = selectedItems.reduce((sum, p) => sum + (getCartItemPrice(p) * (p.totalQuantity || 0)), 0);
     const shippingFee = (deliveryMode === 'ship' && subtotal > 0) ? 15000 : 0;
 
     // Tính discount TRƯỚC
@@ -1463,8 +1582,9 @@ function renderOrderSummary(products) {
 
     let addrLabel = '<span style="color:#aaa">Chọn địa chỉ giao hàng</span>';
     if (selectedAddr) {
-        const short = selectedAddr.address.length > 38
-            ? selectedAddr.address.slice(0, 38) + '…' : selectedAddr.address;
+        const addressText = selectedAddr.address || '';
+        const short = addressText.length > 38
+            ? addressText.slice(0, 38) + '…' : addressText;
         addrLabel = `<strong>${selectedAddr.name}</strong> &nbsp;${short}`;
     }
 
@@ -1599,7 +1719,7 @@ window.openAddrModal = async () => {
                     style="display:flex;align-items:center;gap:6px;color:var(--primary);font-size:13px;
                            font-weight:500;cursor:pointer;padding:12px 0;border-top:1px solid #f0f0f0;margin-top:4px">
                     <span class="material-symbols-outlined" style="font-size:20px">add_circle</span>
-                    Thêm địa chỉ mới
+                    <span id="add-addr-label">Thêm địa chỉ mới</span>
                 </div>
 
                 <!-- Form thêm địa chỉ (ẩn mặc định) -->
@@ -1619,10 +1739,19 @@ window.openAddrModal = async () => {
                         <input id="f-addr" placeholder="123 Đường ABC, Phường X, Quận Y, TP.HCM"
                             style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none">
                     </div>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;margin-bottom:12px;cursor:pointer">
+                        <input id="f-default" type="checkbox" style="width:16px;height:16px;accent-color:var(--primary)">
+                        Đặt làm địa chỉ mặc định
+                    </label>
                     <button id="save-addr-btn" onclick="saveNewAddress()"
                         style="width:100%;padding:11px;background:var(--primary);color:white;border:none;
                                border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px">
                         Lưu địa chỉ
+                    </button>
+                    <button id="cancel-edit-addr-btn" onclick="cancelEditAddress()" type="button"
+                        style="display:none;width:100%;padding:10px;background:white;color:#666;border:1px solid #ddd;
+                               border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px">
+                        Hủy chỉnh sửa
                     </button>
                 </div>
 
@@ -1641,6 +1770,9 @@ window.openAddrModal = async () => {
             .addr-radio.sel{border-color:var(--primary)}
             .addr-radio.sel::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--primary);display:block}
             .badge-def{font-size:10px;border:1px solid var(--primary);color:var(--primary);border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+            .addr-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+            .addr-actions button{border:1px solid #ddd;background:white;border-radius:6px;padding:5px 8px;font-size:11px;color:#555;cursor:pointer}
+            .addr-actions button:hover{border-color:var(--primary);color:var(--primary)}
         </style>
     `;
     document.body.insertAdjacentHTML('beforeend', html);
@@ -1648,34 +1780,101 @@ window.openAddrModal = async () => {
     renderAddresses();
 };
 
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function getAddressId(addr) {
+    if (!addr) return null;
+    return addr.addressId ?? addr.id ?? `${addr.name || ''}|${addr.phone || ''}|${addr.address || ''}`;
+}
+
+function isDefaultAddress(addr) {
+    return addr?.isDefault === true || addr?.isDefault === 'true' || Number(addr?.isDefault) === 1;
+}
+
+function normalizeAddress(addr) {
+    const id = getAddressId(addr);
+    return { ...addr, id, addressId: id, isDefault: isDefaultAddress(addr) };
+}
+
+function findAddressByKey(key) {
+    const id = decodeURIComponent(key);
+    return addresses.find(a => String(getAddressId(a)) === String(id));
+}
+
+function resetAddressForm(hide = true) {
+    editingAddressId = null;
+    const form = document.getElementById('add-addr-form');
+    const confirmBtn = document.getElementById('addr-confirm-btn');
+    const saveBtn = document.getElementById('save-addr-btn');
+    const cancelBtn = document.getElementById('cancel-edit-addr-btn');
+    const label = document.getElementById('add-addr-label');
+    ['f-name', 'f-phone', 'f-addr'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+    });
+    const defaultInput = document.getElementById('f-default');
+    if (defaultInput) defaultInput.checked = false;
+    if (saveBtn) saveBtn.textContent = 'Lưu địa chỉ';
+    if (cancelBtn) cancelBtn.style.display = 'none';
+    if (label) label.textContent = 'Thêm địa chỉ mới';
+    if (hide && form) form.style.display = 'none';
+    if (confirmBtn) confirmBtn.style.display = hide ? 'block' : 'none';
+}
+
 window.toggleAddForm = () => {
     const form = document.getElementById('add-addr-form');
     const confirmBtn = document.getElementById('addr-confirm-btn');
+    if (!form || !confirmBtn) return;
     const isHidden = form.style.display === 'none';
-    form.style.display = isHidden ? 'block' : 'none';
-    confirmBtn.style.display = isHidden ? 'none' : 'block';
+    if (isHidden) {
+        resetAddressForm(false);
+        form.style.display = 'block';
+        confirmBtn.style.display = 'none';
+    } else {
+        resetAddressForm(true);
+    }
 };
 
 async function fetchAddresses() {
-    document.getElementById('addr-list').innerHTML =
-        '<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải...</div>';
+    const list = document.getElementById('addr-list');
+    if (list) {
+        list.innerHTML =
+            '<div style="text-align:center;padding:24px;color:#aaa;font-size:14px">Đang tải...</div>';
+    }
     try {
-        // ===== ĐỔI URL NÀY =====
         const res = await fetch(`${API_BASE}api/users/addresses`, {
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' }
         });
-        addresses = await res.json();
-        if (!selectedAddr) tempAddr = addresses.find(a => a.isDefault) || addresses[0] || null;
-        else tempAddr = selectedAddr;
+        if (!res.ok) throw new Error('Không tải được địa chỉ');
+        const data = await res.json();
+        addresses = Array.isArray(data) ? data.map(normalizeAddress) : [];
+
+        const selectedMatch = selectedAddr ? addresses.find(a =>
+            String(getAddressId(a)) === String(getAddressId(selectedAddr)) ||
+            (a.name === selectedAddr.name && a.phone === selectedAddr.phone && a.address === selectedAddr.address)
+        ) : null;
+        selectedAddr = selectedMatch || selectedAddr;
+        tempAddr = selectedAddr || addresses.find(isDefaultAddress) || addresses[0] || null;
     } catch (e) {
-        document.getElementById('addr-list').innerHTML =
-            '<div style="text-align:center;padding:24px;color:#e00;font-size:14px">Không tải được địa chỉ.</div>';
+        if (list) {
+            list.innerHTML =
+                '<div style="text-align:center;padding:24px;color:#e00;font-size:14px">Không tải được địa chỉ.</div>';
+        }
     }
 }
 
 function renderAddresses() {
     const addrList = document.getElementById('addr-list');
+    if (!addrList) return;
     addrList.innerHTML = '';
 
     if (!addresses || addresses.length === 0) {
@@ -1683,69 +1882,139 @@ function renderAddresses() {
         return;
     }
 
-    const defaultAddr = addresses.find(a => a.isDefault === "true");
-    const otherAddrs  = addresses.filter(a => a.isDefault !== "true");
-
-    if (defaultAddr) addrList.innerHTML += createAddrCard(defaultAddr, true);
-    otherAddrs.forEach(addr => addrList.innerHTML += createAddrCard(addr, false));
+    const sorted = [...addresses].sort((a, b) => Number(isDefaultAddress(b)) - Number(isDefaultAddress(a)));
+    sorted.forEach(addr => addrList.innerHTML += createAddrCard(addr, isDefaultAddress(addr)));
 }
+
 function createAddrCard(addr, isDefault) {
-    const isSelected = tempAddr?.name === addr.name && tempAddr?.phone === addr.phone;
+    const idKey = encodeURIComponent(String(getAddressId(addr)));
+    const isSelected = String(getAddressId(tempAddr)) === String(getAddressId(addr));
     return `
-        <div class="addr-item" onclick="selectTempAddr('${addr.name}', '${addr.phone}')">
+        <div class="addr-item" onclick="selectTempAddr('${idKey}')">
             <div class="addr-radio ${isSelected ? 'sel' : ''}"></div>
             <div style="flex:1">
                 <div style="display:flex;align-items:center;font-weight:500;font-size:14px">
-                    ${addr.name}
+                    ${escapeHtml(addr.name)}
                     ${isDefault ? '<span class="badge-def">Mặc định</span>' : ''}
                 </div>
-                <div style="font-size:13px;color:#666;margin-top:2px">${addr.phone}</div>
-                <div style="font-size:13px;color:#888;margin-top:2px">${addr.address}</div>
+                <div style="font-size:13px;color:#666;margin-top:2px">${escapeHtml(addr.phone)}</div>
+                <div style="font-size:13px;color:#888;margin-top:2px">${escapeHtml(addr.address)}</div>
+                <div class="addr-actions">
+                    <button type="button" onclick="event.stopPropagation(); editAddress('${idKey}')">Sửa</button>
+                    ${isDefault ? '' : `<button type="button" onclick="event.stopPropagation(); setDefaultAddress('${idKey}')">Mặc định</button>`}
+                    <button type="button" onclick="event.stopPropagation(); deleteAddress('${idKey}')">Xóa</button>
+                </div>
             </div>
         </div>
     `;
 }
 
-window.selectTempAddr = (name, phone) => {
-    tempAddr = addresses.find(a => a.name === name && a.phone === phone);
+window.selectTempAddr = (key) => {
+    tempAddr = findAddressByKey(key);
     renderAddresses();
 };
+
+window.editAddress = (key) => {
+    const addr = findAddressByKey(key);
+    if (!addr) return;
+    editingAddressId = getAddressId(addr);
+    document.getElementById('f-name').value = addr.name || '';
+    document.getElementById('f-phone').value = addr.phone || '';
+    document.getElementById('f-addr').value = addr.address || '';
+    document.getElementById('f-default').checked = isDefaultAddress(addr);
+    document.getElementById('add-addr-form').style.display = 'block';
+    document.getElementById('addr-confirm-btn').style.display = 'none';
+    document.getElementById('save-addr-btn').textContent = 'Cập nhật địa chỉ';
+    document.getElementById('cancel-edit-addr-btn').style.display = 'block';
+    document.getElementById('add-addr-label').textContent = 'Đang sửa địa chỉ';
+};
+
+window.cancelEditAddress = () => {
+    resetAddressForm(true);
+};
+
+window.setDefaultAddress = async (key) => {
+    const addr = findAddressByKey(key);
+    if (!addr) return;
+    try {
+        const res = await fetch(`${API_BASE}api/users/addresses/${getAddressId(addr)}`, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: addr.name, phone: addr.phone, address: addr.address, isDefault: 1 })
+        });
+        if (!res.ok) throw new Error('Không đặt được địa chỉ mặc định');
+        await fetchAddresses();
+        tempAddr = addresses.find(a => String(getAddressId(a)) === String(getAddressId(addr))) || tempAddr;
+        renderAddresses();
+    } catch (error) {
+        showToast(error.message || 'Không cập nhật được địa chỉ', 'error');
+    }
+};
+
+window.deleteAddress = async (key) => {
+    const addr = findAddressByKey(key);
+    if (!addr || !confirm('Xóa địa chỉ này?')) return;
+    try {
+        const res = await fetch(`${API_BASE}api/users/addresses/${getAddressId(addr)}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Không xóa được địa chỉ');
+        if (String(getAddressId(selectedAddr)) === String(getAddressId(addr))) selectedAddr = null;
+        if (String(getAddressId(tempAddr)) === String(getAddressId(addr))) tempAddr = null;
+        await fetchAddresses();
+        renderAddresses();
+        renderAll();
+    } catch (error) {
+        showToast(error.message || 'Không xóa được địa chỉ', 'error');
+    }
+};
+
 window.saveNewAddress = async () => {
     const name  = document.getElementById('f-name').value.trim();
     const phone = document.getElementById('f-phone').value.trim();
     const addr  = document.getElementById('f-addr').value.trim();
+    const isDefault = document.getElementById('f-default').checked ? 1 : 0;
     if (!name || !phone || !addr) { alert('Vui lòng điền đầy đủ thông tin!'); return; }
 
     const btn = document.getElementById('save-addr-btn');
+    const oldText = btn.textContent;
     btn.textContent = 'Đang lưu...'; btn.disabled = true;
     try {
-        const res = await fetch(`${API_BASE}api/users/addresses`, {
-            method: 'POST', credentials: 'include',
+        const isEditing = editingAddressId !== null;
+        const res = await fetch(`${API_BASE}api/users/addresses${isEditing ? `/${editingAddressId}` : ''}`, {
+            method: isEditing ? 'PUT' : 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, phone, address: addr, isDefault: parseInt("0") })
+            body: JSON.stringify({ name, phone, address: addr, isDefault })
         });
+        const saved = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(saved?.message || 'Không lưu được địa chỉ');
 
-        // Server có thể trả object hoặc chỉ OK
-        const newAddr = { name, phone, address: addr, isDefault: "false" };
-        addresses.push(newAddr);
-        tempAddr = newAddr;
-
-        // Xóa form
-        document.getElementById('f-name').value = '';
-        document.getElementById('f-phone').value = '';
-        document.getElementById('f-addr').value = '';
-        toggleAddForm();
-
-        // Cập nhật danh sách ngay
+        await fetchAddresses();
+        if (saved) {
+            const savedId = getAddressId(saved);
+            tempAddr = addresses.find(a => String(getAddressId(a)) === String(savedId))
+                || addresses.find(a => a.name === name && a.phone === phone && a.address === addr)
+                || tempAddr;
+        }
+        resetAddressForm(true);
         renderAddresses();
     } catch (e) {
+        showToast(e.message || 'Không lưu được địa chỉ', 'error');
     } finally {
-        btn.textContent = 'Lưu địa chỉ';
+        btn.textContent = oldText;
         btn.disabled = false;
     }
 };
 
 window.confirmAddress = () => {
+    if (!tempAddr) {
+        showToast('Vui lòng chọn địa chỉ giao hàng', 'error');
+        return;
+    }
     selectedAddr = tempAddr;
     closeAddrModal();
     renderAll();
@@ -2077,7 +2346,7 @@ function validateCheckout() {
 // Hàm tổng hợp payload gửi lên server
 function buildOrderPayload() {
     const selectedItems = cartData.filter(p => p.isSelected);
-    const subtotal = selectedItems.reduce((sum, p) => sum + (p.price * p.totalQuantity), 0);
+    const subtotal = selectedItems.reduce((sum, p) => sum + (getCartItemPrice(p) * p.totalQuantity), 0);
     const shippingFee = deliveryMode === 'ship' ? 15000 : 0;
 
     let discount = 0;
@@ -2102,7 +2371,8 @@ function buildOrderPayload() {
         items: selectedItems.map(p => ({
             productId: p.productId,
             quantity: p.totalQuantity,
-            price: p.price
+            price: getCartItemPrice(p),
+            size: getCartItemSize(p)
         })),
         subtotal,
         shippingFee,
