@@ -220,6 +220,41 @@
       box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.5);
     }
 
+    .captcha-box {
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .captcha-image {
+      width: 100%;
+      height: 56px;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 0.875rem;
+      background: rgba(255, 255, 255, 0.68);
+      object-fit: cover;
+    }
+
+    .captcha-refresh {
+      height: 44px;
+      width: 44px;
+      border: 1px solid var(--slate-200);
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.74);
+      color: var(--bingchun-dark);
+      font-size: 1.2rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .captcha-refresh:hover {
+      border-color: var(--bingchun-brand);
+      background: rgba(224, 242, 254, 0.9);
+    }
+
     .flex-between {
       display: flex;
       justify-content: space-between;
@@ -383,6 +418,15 @@
 <a class="link-small" data-purpose="forgot-password-link" href="forgotPassword.html" style="">Quên mật khẩu?</a>
 </div>
 <input class="input-field" id="password" name="password" placeholder="••••••••" required="" type="password"/>
+</div>
+<div class="form-group">
+<label class="label" for="captchaAnswer" style="">Mã captcha</label>
+<div class="captcha-box">
+<img class="captcha-image" id="captchaImage" alt="Mã captcha"/>
+<button class="captcha-refresh" id="refreshCaptchaBtn" type="button" title="Đổi mã captcha">↻</button>
+</div>
+<input id="captchaId" type="hidden"/>
+<input class="input-field" id="captchaAnswer" name="captchaAnswer" placeholder="Nhập mã trong hình" required="" autocomplete="off" type="text"/>
 </div>
 <!-- Login Button -->
 <button class="btn-primary"  style="" type="submit">Đăng nhập</button>

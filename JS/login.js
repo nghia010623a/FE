@@ -16,16 +16,51 @@ function showErrorModal(text) {
     window.location.href = API_BASE+"oauth2/authorization/google?prompt=select_account";
     });
 
+async function loadCaptcha() {
+  const img = document.getElementById("captchaImage");
+  const idInput = document.getElementById("captchaId");
+  const answerInput = document.getElementById("captchaAnswer");
+  if (!img || !idInput) return;
+
+  try {
+    img.removeAttribute("src");
+    img.alt = "Đang tải captcha";
+    const response = await fetch(API_BASE + "api/captcha", {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!response.ok) throw new Error("Không tải được captcha");
+    const data = await response.json();
+    idInput.value = data.captchaId || "";
+    img.src = data.image || "";
+    img.alt = "Mã captcha";
+    if (answerInput) answerInput.value = "";
+  } catch (error) {
+    console.error("Lỗi captcha:", error);
+    idInput.value = "";
+    img.alt = "Không tải được captcha";
+    showErrorModal("Không tải được mã captcha, vui lòng thử lại");
+  }
+}
+
 async function checkLogin()
 {
 
   let identifier = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
+  const captchaId = document.getElementById("captchaId")?.value.trim();
+  const captchaAnswer = document.getElementById("captchaAnswer")?.value.trim();
  
 
   // kiểm tra rỗng
-  if (!identifier || !password) {
+  if (!identifier || !password || !captchaAnswer) {
     showErrorModal("Vui lòng nhập đầy đủ thông tin");
+    return;
+  }
+  if (!captchaId) {
+    showErrorModal("Mã captcha chưa sẵn sàng, vui lòng tải lại mã");
+    await loadCaptcha();
     return;
   }
 
@@ -39,7 +74,7 @@ async function checkLogin()
                 "Content-Type": "application/json",
                 // "ngrok-skip-browser-warning": "69420"
             },
-            body: JSON.stringify({ identifier, password})
+            body: JSON.stringify({ identifier, password, captchaId, captchaAnswer})
         });
   
         if (response.ok) {
@@ -80,17 +115,21 @@ async function checkLogin()
             console.log(text.message);
   
             showErrorModal(text.message);
+            await loadCaptcha();
   
         }
         else { const text = await response.json();
           console.log(text.message);
 
-          showErrorModal(text.message);}
+          showErrorModal(text.message);
+          await loadCaptcha();
+        }
   
     } catch (error) {
   
         console.error("Lỗi kết nối:", error);
         showErrorModal("Không thể kết nối tới server");
+        await loadCaptcha();
   
     }
   }
@@ -118,6 +157,12 @@ var loginLink = document.getElementById('signup-link');
     };
   }
   document.addEventListener("DOMContentLoaded", function () {
+    loadCaptcha();
+
+    const refreshBtn = document.getElementById("refreshCaptchaBtn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", loadCaptcha);
+    }
 
     document.getElementById("loginForm").addEventListener("submit", function(e) {
   
@@ -128,7 +173,6 @@ var loginLink = document.getElementById('signup-link');
     });
   
   });
-
 
 
 
