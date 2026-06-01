@@ -877,6 +877,14 @@ function connectAdminSocket() {
       wsLog(`Broadcast nhận: ${payload.title || ''}`);
       addSystemNotif(payload.title || 'Thông báo', payload.content || '');
     });
+    adminStompClient.subscribe('/noticeall/admin/orders', message => {
+      const payload = parseSocketPayload(message);
+      wsLog(`Đơn mới realtime: ${payload.title || ''}`);
+      addSystemNotif(payload.title || 'Có đơn hàng mới', payload.content || '');
+      toast(payload.title || 'Có đơn hàng mới', 'success');
+      renderDashboard();
+      renderOrders(currentOrderFilter);
+    });
   }, err => {
     wsLog(`WebSocket lỗi: ${err?.message || err}`);
   });
