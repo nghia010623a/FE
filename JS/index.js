@@ -279,6 +279,58 @@ function initUpdateProfileForm() {
     };
 }
 
+async function readApiError(response, fallback) {
+    const data = await response.json().catch(() => ({}));
+    return data.message || fallback;
+}
+
+function initAccountDetailForm() {
+    const form = document.getElementById("accountDetailForm");
+    if (!form || form.dataset.bound === "true") return;
+    form.dataset.bound = "true";
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const phone = document.getElementById("phone")?.value.trim();
+        const email = document.getElementById("email")?.value.trim();
+        const btn = form.querySelector('button[type="submit"]');
+
+        if (!email) return showErrorModal("Vui lòng nhập email");
+        if (!phone) return showErrorModal("Vui lòng nhập số điện thoại");
+        if (!/^0\d{9}$/.test(phone)) return showErrorModal("Số điện thoại không hợp lệ");
+
+        const oldText = btn ? btn.textContent : "";
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Đang lưu...";
+        }
+
+        try {
+            const response = await fetch(API_BASE + "api/users/me", {
+                method: "PATCH",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, phone })
+            });
+
+            if (!response.ok) {
+                throw new Error(await readApiError(response, "Cập nhật thất bại"));
+            }
+
+            const data = await response.json().catch(() => ({}));
+            showToast(data.message || "Đã lưu thay đổi", "success");
+            await getDetailAccount();
+        } catch (error) {
+            showErrorModal(error.message || "Không thể kết nối tới server");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = oldText;
+            }
+        }
+    });
+}
+
 async function getDetailAccount() {
     try {
         const res = await fetch(API_BASE + "api/users/me", {
@@ -785,8 +837,9 @@ function handlePostLoadLogic(path) {
     if (path.includes("account")) {
         getDetailAccount();
         initAvatarUpload();
+        initAccountDetailForm();
         initChangePasswordForm();
-
+                            
         const overlay = document.getElementById("googleOverlay");
         if (overlay && localStorage.getItem("loginWithGoogle") === "true") {
             overlay.classList.add("active");
@@ -827,6 +880,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (document.getElementById("changePasswordForm")) {
         getDetailAccount();
         initAvatarUpload();
+        initAccountDetailForm();
         initChangePasswordForm();
     }
 });
@@ -1941,7 +1995,7 @@ window.setDefaultAddress = async (key) => {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: addr.name, phone: addr.phone, address: addr.address, isDefault: 1 })
+            body: JSON.stringify({ name: addr.name, phone: addr.phone, address: addr.address, isDefault: true })
         });
         if (!res.ok) throw new Error('Không đặt được địa chỉ mặc định');
         await fetchAddresses();
@@ -1976,7 +2030,7 @@ window.saveNewAddress = async () => {
     const name  = document.getElementById('f-name').value.trim();
     const phone = document.getElementById('f-phone').value.trim();
     const addr  = document.getElementById('f-addr').value.trim();
-    const isDefault = document.getElementById('f-default').checked ? 1 : 0;
+    const isDefault = document.getElementById('f-default').checked;
     if (!name || !phone || !addr) { alert('Vui lòng điền đầy đủ thông tin!'); return; }
 
     const btn = document.getElementById('save-addr-btn');
