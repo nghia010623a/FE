@@ -552,7 +552,8 @@ function getLocation() {
                     })
                     .then(data => {
                         if (!data || !data.address) {
-                            alert("Không tìm thấy dữ liệu địa chỉ hợp lệ.");
+                            showToast(error.message || 'Không tìm thấy dữ liệu địa chỉ hợp lệ.', 'error');
+
                             return;
                         }
 
@@ -624,6 +625,7 @@ function getLocation() {
         );
     } else {
         alert("Trình duyệt của bạn không hỗ trợ định vị Geolocation.");
+        
     }
 }
 
@@ -1579,7 +1581,7 @@ async function addToCartApi(productId, quantity = 1) {
 
     } catch (error) {
         console.error('Lỗi API AddToCart:', error);
-        alert('Không thể thêm vào giỏ hàng. Vui lòng thử lại.');
+        showToast(error.message || 'Vui lòng đăng nhập để tiến hành đặt hàng', 'error');
         return null;
     }
 }
