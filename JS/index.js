@@ -792,6 +792,29 @@ function initAddressAutoFill() {
 
     wardSelect.addEventListener('change', updateAddressField);
 }
+
+async function loadHomeBanner() {
+    const bannerEl = document.getElementById("banner");
+    if (!bannerEl) return;
+    try {
+        const res = await fetch(`${API_BASE}api/users/banners?site=home`, {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok) throw new Error("Không tải được banner");
+        const banners = await res.json();
+        const first = Array.isArray(banners) && banners.length ? banners[0] : null;
+        const imageUrl = first?.imageUrl || first?.bannerImage || first?.image || "";
+        if (imageUrl) {
+            bannerEl.src = imageUrl.startsWith("http") ? imageUrl : `${API_BASE}${imageUrl}`;
+        } else {
+            bannerEl.src = `${API_BASE}tstc1.png`;
+        }
+    } catch (e) {
+        bannerEl.src = `${API_BASE}tstc1.png`;
+    }
+}
 function handlePostLoadLogic(path) {
     initReveal();
     setupUserImage();
@@ -808,20 +831,28 @@ function handlePostLoadLogic(path) {
     }
     if (path === "home")
     {
-    banner.src = `${API_BASE}tstc1.png`;
+    loadHomeBanner();
     
     let pm1 = document.getElementById("pm1");
-    pm1.src = `${API_BASE}ts1.png`;
-    pm1.style.objectFit = "contain";
+    if (pm1) {
+      pm1.src = `${API_BASE}ts1.png`;
+      pm1.style.objectFit = "contain";
+    }
         let pm2 = document.getElementById("pm2");
-    pm2.src = `${API_BASE}ttc6.png`;
-    pm2.style.objectFit = "contain";
+    if (pm2) {
+      pm2.src = `${API_BASE}ttc6.png`;
+      pm2.style.objectFit = "contain";
+    }
     let pm3 = document.getElementById("pm3");
-    pm3.src = `${API_BASE}tstc2.png`;
-    pm3.style.objectFit = "contain";
+    if (pm3) {
+      pm3.src = `${API_BASE}tstc2.png`;
+      pm3.style.objectFit = "contain";
+    }
     let pm4 = document.getElementById("pm4");
-    pm4.src = `${API_BASE}k3.png`;
-    pm4.style.objectFit = "contain";
+    if (pm4) {
+      pm4.src = `${API_BASE}k3.png`;
+      pm4.style.objectFit = "contain";
+    }
     
     }
     if (path === "order-detail") {
@@ -846,6 +877,11 @@ function handlePostLoadLogic(path) {
         if (overlay && localStorage.getItem("loginWithGoogle") === "true") {
             overlay.classList.add("active");
         }
+    }
+
+    if (path === "cart") {
+        loadCartForCurrentMode();
+        renderRecommendedProducts();
     }
 
     // Nếu load vào trang menu, khởi tạo logic menu động
@@ -928,6 +964,70 @@ async function ensureProductSearchCache() {
     return productSearchCache;
 }
 
+async function getProductById(productId) {
+    const products = await ensureProductSearchCache();
+    return products.find(p => Number(p.productId) === Number(productId)) || null;
+}
+
+function buildProductCardHTML(item, options = {}) {
+    const compact = Boolean(options.compact);
+    const imageUrl = resolveAssetUrl(item.imageUrl, '../binglogo.png');
+    const rating = Number(item.rating || 0);
+    const categoryText = item.categoryName || item.category || 'BingChun';
+    const desc = item.description || item.shortDescription || 'Món được yêu thích từ BingChun.';
+
+    return `
+      <article data-product-id="${item.productId}" data-category="${item.category || ''}" class="product-card group relative overflow-hidden rounded-[2rem] bg-white/70 border border-white/60 shadow-[0_16px_40px_rgba(15,23,42,.08)] backdrop-blur-xl cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,.14)]">
+        <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-sky-100/40 pointer-events-none"></div>
+        <div class="relative p-4">
+          <div class="relative aspect-square rounded-[1.5rem] overflow-hidden bg-slate-50 border border-white/70">
+            <img src="${imageUrl}" alt="${escapeHtml(item.productName || '')}" class="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105">
+            <div class="absolute top-3 left-3 text-[10px] font-extrabold uppercase tracking-[0.14em] px-2.5 py-1 rounded-full bg-white/90 text-sky-700 shadow">
+              ${escapeHtml(categoryText)}
+            </div>
+          </div>
+          <div class="pt-4">
+            <div class="text-[11px] text-slate-500 font-semibold mb-1">Mã #${item.productId}</div>
+            <h3 class="text-[15px] font-extrabold text-slate-900 leading-snug line-clamp-2 min-h-[40px]">${escapeHtml(item.productName || '')}</h3>
+            <div class="flex items-center gap-2 mt-2 cursor-pointer select-none" data-rating="${rating}" onclick="event.stopPropagation(); openProductReviewsModal(${item.productId})" title="Xem và đánh giá">
+              <span class="text-amber-500 text-xs">${simpleStarText(rating)}</span>
+              <span class="text-[12px] text-slate-500">${rating.toFixed(1)}</span>
+            </div>
+            <p class="text-[12px] text-slate-500 mt-2 line-clamp-2 min-h-[32px]">${escapeHtml(desc)}</p>
+            <div class="flex items-end justify-between gap-3 mt-4">
+              <div>
+                <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Giá</div>
+                <div class="text-[20px] font-black text-primary">${Number(item.price || 0).toLocaleString('vi-VN')}đ</div>
+              </div>
+              <button class="add-to-cart-btn shrink-0 w-11 h-11 rounded-2xl text-white grid place-items-center shadow-lg transition-transform hover:scale-105 active:scale-95" data-product-id="${item.productId}" style="background:linear-gradient(135deg,#38bdf8,#006977)">
+                <span class="material-symbols-outlined">add_shopping_cart</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    `;
+}
+
+async function renderRecommendedProducts() {
+    const host = document.getElementById('recommendations-grid');
+    if (!host) return;
+    host.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b;font-size:14px">Đang tải sản phẩm...</div>
+    `;
+    try {
+        const products = await loadProduct();
+        const list = Array.isArray(products) ? products : [];
+        if (!list.length) {
+            host.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b;font-size:14px">Chưa có sản phẩm.</div>';
+            return;
+        }
+        host.innerHTML = list.map(item => buildProductCardHTML(item, { compact: true })).join('');
+    } catch (e) {
+        host.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#dc2626;font-size:14px">Không tải được danh sách sản phẩm.</div>';
+    }
+}
+
 window.toggleProductSearch = async function(event) {
     if (event) event.stopPropagation();
     const panel = document.getElementById('productSearchPanel');
@@ -959,7 +1059,7 @@ window.renderProductSearchSuggestions = async function(query) {
     box.innerHTML = results.length ? results.map(p => `
         <button type="button" onclick="openSearchProduct(${p.productId})"
             style="width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:9px;border-radius:12px;cursor:pointer">
-            <img src="${API_BASE}${p.imageUrl || ''}" style="width:42px;height:42px;border-radius:10px;object-fit:contain;background:#f8fafc">
+            <img src="${resolveAssetUrl(p.imageUrl || '', '../binglogo.png')}" style="width:42px;height:42px;border-radius:10px;object-fit:contain;background:#f8fafc">
             <span style="flex:1;min-width:0">
                 <b style="display:block;color:#0f172a;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.productName || '')}</b>
                 <span style="font-size:12px;color:#0284c7">${Number(p.price || 0).toLocaleString('vi-VN')}đ</span>
@@ -1090,65 +1190,7 @@ async function initDynamicMenu() {
                 </svg>`;
     };
 
-    const createProductCard = (item) => {
-        // Nối link ảnh chuẩn
-        const fullImageUrl = API_BASE+`${item.imageUrl}`;
-
-        return `
-<div data-product-id="${item.productId}" style="cursor:pointer;box-shadow:inset 0 8px 32px 0 white" class="product-card group relative overflow-hidden rounded-[2.5rem] glass-card p-6 flex flex-col justify-between
-                border-2 border-transparent hover:border-blue-600 hover:shadow-2xl transition-all duration-500">
-
-                <div class="absolute top-2 left-2 w-16 h-16 z-20
-                    pointer-events-none opacity-0 -translate-x-5 group-hover:opacity-100 group-hover:translate-x-0 group-hover:border-blue-600
-                    transition-all duration-500 ease-out">
-            <img
-                src="../binglogo.png"
-                alt="Badge"
-                class="w-full h-full object-contain filter drop-shadow-lg"
-            >
-        </div>
-
-                <div class="relative w-full aspect-square rounded-3xl overflow-hidden mb-6 bg-gray-100 flex items-center justify-center">
-                <img
-                    src="${fullImageUrl}"
-                    alt="${item.productName}"
-                    class="max-w-full max-h-full object-contain transition-transform duration-700"
-                >
-                <div class="absolute top-0 left-4 w-12 h-12 z-10
-                        opacity-0 scale-50 group-hover:opacity-100 group-hover:scale-100
-                        transition-all duration-500 ease-out">
-
-            </div>
-            </div>
-
-            <div>
-                <h3 class="text-xl font-bold text-on-surface mb-1">
-                    ${item.productName}
-                </h3>
-
-                <div data-no-detail="1" onclick="event.stopPropagation(); openProductReviewsModal(${item.productId})" title="Xem đánh giá" style="cursor:pointer" class="flex items-center gap-2 mb-3">
-                    ${renderStars(item.rating)}
-                    <span class="text-xs text-on-surface-variant">
-                        ${(item.rating).toFixed(1)}
-                    </span>
-                </div>
-
-                <div class="flex items-center justify-between mt-2">
-                    <span class="text-2xl font-black text-primary">
-                    ${Number(item.price).toLocaleString('en-US')}đ
-                    </span>
-
-                    <button
-                        style="background-color:rgba(111, 172, 216)"
-                        class="add-to-cart-btn w-12 h-12 rounded-2xl text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
-                        data-product-id="${item.productId}"
-                    >
-                        <span class="material-symbols-outlined">add_shopping_cart</span>
-                    </button>
-                </div>
-            </div>
-        </div>`;
-    };
+    const createProductCard = (item) => buildProductCardHTML(item);
 
 //logic addCart
 
@@ -1202,6 +1244,26 @@ function simpleStarText(rating) {
 }
 
 window.__productReviewModalState = null;
+async function findReviewableOrderForProduct(productId) {
+    try {
+        const res = await fetch(`${API_BASE}api/users/orders`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (!res.ok) return null;
+        const orders = await res.json();
+        const normalizedProductId = Number(productId);
+        const match = (orders || []).find(order => {
+            if (!isCompletedOrderStatus(order.status)) return false;
+            return (order.orderDetails || []).some(detail => Number(detail?.product?.productId || detail?.productId) === normalizedProductId);
+        });
+        return match ? Number(match.orderId) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 window.filterProductReviews = function(filter) {
     if (!window.__productReviewModalState) return;
     window.__productReviewModalState.filter = filter;
@@ -1221,24 +1283,50 @@ function renderProductReviewModal(state) {
         all: state.reviews.length,
         5: state.reviews.filter(r => Number(r.rating || 0) === 5).length,
         4: state.reviews.filter(r => Number(r.rating || 0) === 4).length,
-        3: state.reviews.filter(r => Number(r.rating || 0) === 3).length
+        3: state.reviews.filter(r => Number(r.rating || 0) === 3).length,
+        2: state.reviews.filter(r => Number(r.rating || 0) === 2).length,
+        1: state.reviews.filter(r => Number(r.rating || 0) === 1).length
     };
 
+    const avgRating = state.reviews.length
+        ? (state.reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / state.reviews.length).toFixed(1)
+        : '0.0';
+
     content.innerHTML = `
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;">
+          <div>
+            <div style="font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Tổng quan đánh giá</div>
+            <div style="font-size:22px;font-weight:900;color:#0f172a;margin-top:4px;">${avgRating} / 5</div>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">${state.reviews.length} đánh giá </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="font-size:13px;color:#334155;font-weight:700;">Bộ lọc sao</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${[
             ['all', `Tất cả (${counts.all})`],
             ['5', `5 sao (${counts[5]})`],
             ['4', `4 sao (${counts[4]})`],
             ['3', `3 sao (${counts[3]})`],
-            ['2', '2 sao'],
-            ['1', '1 sao']
+            ['2', `2 sao (${counts[2]})`],
+            ['1', `1 sao (${counts[1]})`]
           ].map(([key, label]) => `
             <button type="button" onclick="filterProductReviews('${key}')"
               style="border:1px solid ${state.filter === key ? '#0ea5e9' : '#e2e8f0'};background:${state.filter === key ? '#e0f2fe' : '#fff'};color:#0f172a;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;">
               ${label}
             </button>
           `).join('')}
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:14px;padding:14px;border-radius:14px;background:#fff;border:1px solid #e2e8f0;">
+          <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:8px;">Gửi đánh giá của bạn</div>
+          ${state.reviewOrderId ? `
+            ${reviewFormHtml(state.reviewOrderId, state.productId)}
+          ` : `
+            <div style="padding:12px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5;">
+              Bạn cần có ít nhất một đơn hàng đã hoàn thành chứa sản phẩm này để gửi đánh giá.
+            </div>
+          `}
         </div>
         ${reviews.length ? reviews.map(r => `
           <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;background:#f8fafc;">
@@ -1287,10 +1375,11 @@ async function openProductReviewsModal(productId) {
         });
         if (!res.ok) throw new Error('Không tải được đánh giá');
         const reviews = await res.json();
-        window.__productReviewModalState = { productId, reviews: reviews || [], filter: 'all' };
+        await loadMyReviewedProductIds();
+        const reviewOrderId = await findReviewableOrderForProduct(productId);
+        window.__productReviewModalState = { productId, reviews: reviews || [], filter: 'all', reviewOrderId };
         if (!reviews.length) {
             content.innerHTML = '<div style="text-align:center;color:#64748b;padding:28px;">Sản phẩm chưa có đánh giá.</div>';
-            return;
         }
         renderProductReviewModal(window.__productReviewModalState);
     } catch (error) {
@@ -1321,10 +1410,10 @@ async function openProductDetailModal(productId) {
         const p = await res.json();
 
         const images = (p.images && p.images.length) ? p.images : (p.imageUrl ? [p.imageUrl] : []);
-        const mainImg = images[0] ? (API_BASE + images[0]) : '../binglogo.png';
-        const thumbs = images.map(u => API_BASE + u);
-        const stock = p.stockQuantity != null ? p.stockQuantity : 99;
-        const maxQty = Math.max(1, Math.min(stock, 99));
+        const mainImg = resolveAssetUrl(images[0], '../binglogo.png');
+        const thumbs = images.map(u => resolveAssetUrl(u, '../binglogo.png'));
+        const stock = p.quantity != null ? p.quantity : (p.stockQuantity != null ? p.stockQuantity : 100);
+        const maxQty = Math.max(1, Math.min(stock, 100));
 
         document.getElementById('product-detail-body').innerHTML = `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
@@ -1348,6 +1437,10 @@ async function openProductDetailModal(productId) {
                 <span style="font-size:13px;color:#64748b;">${Number(p.rating || 0).toFixed(1)}</span>
               </div>
               <div style="font-size:32px;font-weight:900;color:#006977;margin-bottom:14px;">${Number(p.price).toLocaleString('vi-VN')}đ</div>
+              <div onclick="openProductReviewsModal(${p.productId})" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 12px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;">
+                <span style="color:#f59e0b;font-size:14px;">${simpleStarText(p.rating)}</span>
+                <span style="font-size:13px;color:#64748b;">${Number(p.rating || 0).toFixed(1)} · Bấm để xem đánh giá</span>
+              </div>
               <p style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:16px;">${p.description || 'Món kem trà sữa đặc biệt từ BingChun.'}</p>
               <div style="font-size:13px;color:#334155;margin-bottom:18px;">
                 <strong>Còn lại:</strong> <span id="pd-stock">${stock}</span> phần
@@ -1385,7 +1478,7 @@ async function openProductDetailModal(productId) {
             const img = document.getElementById('pd-main-img');
             const cartIcon = document.getElementById('cart-icon');
             animateFlyToCart(img, cartIcon);
-            await addToCartApi(productId, qty);
+            await addToCartApi(productId, qty, p);
             modal.remove();
         };
 
@@ -1540,13 +1633,122 @@ function animateFlyToCart(imgElement, cartElement) {
     });
 }
 
+const GUEST_CART_KEY = 'bingchun_guest_cart';
+
+function isLoggedInUser() {
+    return Boolean(getCurrentUser());
+}
+
+function getGuestCart() {
+    try {
+        const raw = localStorage.getItem(GUEST_CART_KEY);
+        const cart = raw ? JSON.parse(raw) : [];
+        return Array.isArray(cart) ? cart : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveGuestCart(cart) {
+    localStorage.setItem(GUEST_CART_KEY, JSON.stringify(Array.isArray(cart) ? cart : []));
+}
+
+function normalizeCartItemForGuest(item) {
+    const rawToppings = Array.isArray(item.toppings)
+        ? item.toppings
+        : String(item.toppings || '')
+            .split(',')
+            .map(v => v.trim())
+            .filter(Boolean);
+    return {
+        productId: Number(item.productId),
+        productName: item.productName || item.name || '',
+        imageUrl: resolveAssetUrl(item.imageUrl || item.image || ''),
+        price: Number(item.price || 0),
+        rating: Number(item.rating || 0),
+        category: item.category || item.categoryName || '',
+        description: item.description || '',
+        totalQuantity: Number(item.totalQuantity ?? item.quantity ?? item.qty ?? 1),
+        size: (item.size || 'M').toUpperCase() === 'L' ? 'L' : 'M',
+        note: item.note || '',
+        toppings: rawToppings,
+        isSelected: item.isSelected !== false
+    };
+}
+
+function getCartItemQuantity(item) {
+    return Math.max(1, Number(item?.totalQuantity ?? item?.quantity ?? item?.qty ?? 1) || 1);
+}
+
+function resolveAssetUrl(url, fallback = '') {
+    const value = String(url || '').trim();
+    if (!value) return fallback;
+    if (/^(https?:|data:|blob:)/i.test(value)) return value;
+    return value.startsWith('/') ? `${API_BASE}${value.slice(1)}` : `${API_BASE}${value}`;
+}
+
+function getCartBadgeCountForCurrentMode() {
+    if (isLoggedInUser()) {
+        return fetch(API_BASE + "api/users/cart", {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" }
+        })
+            .then(res => res.ok ? res.json() : { quantity: 0 })
+            .then(data => Number(data?.quantity || 0))
+            .catch(() => 0);
+    }
+    return Promise.resolve(getGuestCart().reduce((sum, item) => sum + Number(item.totalQuantity || 0), 0));
+}
+
+function renderCartFromGuestStorage() {
+    cartData = getGuestCart().map(item => ({
+        ...normalizeCartItemForGuest(item),
+        isSelected: item.isSelected !== false
+    }));
+    renderAll();
+}
+
+function loadCartForCurrentMode() {
+    if (isLoggedInUser()) {
+        return loadCartFromServer();
+    }
+    renderCartFromGuestStorage();
+    return Promise.resolve();
+}
+
 // 2. Hàm CALL API POST để lưu vào giỏ hàng trên Server
 // Viết dạng async để xử lý bất đồng bộ
-async function addToCartApi(productId, quantity = 1) {
+async function addToCartApi(productId, quantity = 1, productMeta = null) {
     const bodyData = {
         productId: Number(productId),
         quantity: Math.max(1, Number(quantity) || 1)
     };
+
+    if (!isLoggedInUser()) {
+        const qty = Math.max(1, Number(quantity) || 1);
+        const resolvedMeta = (productMeta && productMeta.productName && productMeta.imageUrl && Number(productMeta.price || 0) > 0)
+            ? productMeta
+            : (await getProductById(productId)) || productMeta || {};
+        const meta = normalizeCartItemForGuest({
+            ...resolvedMeta,
+            productId,
+            totalQuantity: qty
+        });
+        const guestCart = getGuestCart();
+        const index = guestCart.findIndex(item => Number(item.productId) === Number(productId));
+        if (index > -1) {
+            guestCart[index].totalQuantity = Number(guestCart[index].totalQuantity || 0) + qty;
+            if (productMeta?.size) guestCart[index].size = meta.size;
+            if (productMeta?.note != null) guestCart[index].note = meta.note;
+        } else {
+            guestCart.push({ ...meta, totalQuantity: qty });
+        }
+        saveGuestCart(guestCart);
+        const badge = document.getElementById('cart-count');
+        if (badge) badge.innerText = guestCart.reduce((sum, item) => sum + Number(item.totalQuantity || 0), 0);
+        return 'guest-cart-ok';
+    }
 
     try {
         console.log(`Đang gọi API add sản phẩm ${productId} to server...`);
@@ -1570,18 +1772,13 @@ async function addToCartApi(productId, quantity = 1) {
 
         console.log('Response từ server:', text); // "OK"
 
-        // Tăng badge lên 1 vì server chỉ trả "OK", không trả số lượng
-        const badge = document.getElementById('cart-count');
-        if (badge) {
-            const current = parseInt(badge.innerText) || 0;
-            updateCartBadgeUI(current + bodyData.quantity);
-        }
+        updateCartBadge();
 
         return text;
 
     } catch (error) {
         console.error('Lỗi API AddToCart:', error);
-        showToast(error.message || 'Vui lòng đăng nhập để tiến hành đặt hàng', 'error');
+        showToast('Không thể thêm sản phẩm vào giỏ', 'error');
         return null;
     }
 }
@@ -1594,6 +1791,11 @@ function updateCartBadgeUI(count) {
         // Ẩn badge nếu số lượng = 0
         badge.style.display = 'flex';
     }
+}
+
+async function updateCartBadge() {
+    const count = await getCartBadgeCountForCurrentMode();
+    updateCartBadgeUI(count);
 }
 
 // 4. Gắn sự kiện Click toàn cục (Event Delegation)
@@ -1623,7 +1825,19 @@ document.addEventListener('click', async (e) => {
     }
 
     // 6. GỌI API
-    await addToCartApi(productId);
+    const productMeta = productCard ? {
+        productId,
+        productName: productCard.querySelector('h3')?.textContent?.trim() || productCard.querySelector('.item-title')?.textContent?.trim() || '',
+        imageUrl: productImg?.getAttribute('src') || '',
+        price: Number(
+            (productCard.querySelector('.price-tag')?.textContent || productCard.querySelector('.text-2xl')?.textContent || '0')
+                .replace(/[^\d]/g, '')
+        ) || 0,
+        rating: Number(productCard.querySelector('[data-rating]')?.getAttribute('data-rating') || 0),
+        category: productCard.getAttribute('data-category') || ''
+    } : null;
+
+    await addToCartApi(productId, 1, productMeta);
 });
 
 
@@ -1634,29 +1848,7 @@ document.addEventListener('click', async (e) => {
 
 // --- KHỞI TẠO KHI LOAD TRANG ---
 async function initCartBadgeOnLoad() {
-    let dataM = 0;
-    try {
-
-        const response = await fetch(API_BASE+"api/users/cart", {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-            }
-        });
-        console.log(response.status);
-        const data = await response.json();
-        dataM=data.quantity;
-        console.log(dataM);
-
-        updateCartBadgeUI(dataM);
-
-    } catch (e) {
-
-        console.log(e);
-
-        updateCartBadgeUI(dataM);
-    }
+    await updateCartBadge();
 }
 
 initCartBadgeOnLoad();
@@ -1665,26 +1857,58 @@ let cartData = [];
 const cartIconButton = document.getElementById("cart-icon");
 if (cartIconButton) {
     cartIconButton.addEventListener("click", async () => {
-        await loadCartFromServer();
+        await loadCartForCurrentMode();
     });
 }
 
 const SIZE_L_SURCHARGE = 10000;
+const TOPPING_OPTIONS = [
+    { key: 'white_boba', label: 'Trân châu trắng', price: 5000, icon: '' },
+    { key: 'black_boba', label: 'Trân châu đen', price: 5000, icon: '' },
+    { key: 'aloe_vera', label: 'Nha đam', price: 5000, icon: '' }
+];
 
 function getCartItemSize(product) {
     return (product?.size || "M").toUpperCase() === "L" ? "L" : "M";
 }
 
+function getCartItemToppings(product) {
+    const raw = Array.isArray(product?.toppings)
+        ? product.toppings
+        : String(product?.toppings || '')
+            .split(',')
+            .map(v => v.trim())
+            .filter(Boolean);
+    return raw.filter(key => TOPPING_OPTIONS.some(t => t.key === key));
+}
+
+function getCartItemToppingPrice(product) {
+    return getCartItemToppings(product).length * 5000;
+}
+
 function getCartItemPrice(product) {
     const basePrice = Number(product?.price || 0);
-    return basePrice + (getCartItemSize(product) === "L" ? SIZE_L_SURCHARGE : 0);
+    return basePrice
+        + (getCartItemSize(product) === "L" ? SIZE_L_SURCHARGE : 0)
+        + getCartItemToppingPrice(product);
 }
 
 const cartNoteTimers = new Map();
 
+function syncGuestCartStorage() {
+    if (isLoggedInUser()) return;
+    saveGuestCart(cartData.map(item => normalizeCartItemForGuest(item)));
+    updateCartBadge();
+}
+
 async function persistCartItem(productId) {
     const item = cartData.find(p => Number(p.productId) === Number(productId));
     if (!item) return;
+
+    if (!isLoggedInUser()) {
+        syncGuestCartStorage();
+        return;
+    }
 
     try {
         await fetch(API_BASE + "api/users/cart", {
@@ -1693,9 +1917,10 @@ async function persistCartItem(productId) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 productId: Number(productId),
-                quantity: Number(item.totalQuantity || 1),
+                quantity: getCartItemQuantity(item),
                 size: getCartItemSize(item),
-                note: item.note || ""
+                note: item.note || "",
+                toppings: getCartItemToppings(item)
             })
         });
     } catch (e) {
@@ -1708,6 +1933,7 @@ window.setCartItemSize = (productId, size) => {
     if (!item) return;
     item.size = size === "L" ? "L" : "M";
     persistCartItem(productId);
+    if (!isLoggedInUser()) syncGuestCartStorage();
     renderAll();
 };
 
@@ -1718,11 +1944,28 @@ window.setCartItemNote = (productId, note) => {
     if (cartNoteTimers.has(productId)) clearTimeout(cartNoteTimers.get(productId));
     cartNoteTimers.set(productId, setTimeout(() => {
         persistCartItem(productId);
+        if (!isLoggedInUser()) syncGuestCartStorage();
         cartNoteTimers.delete(productId);
     }, 450));
 };
 
+window.toggleCartItemTopping = (productId, toppingKey, checked) => {
+    const item = cartData.find(p => Number(p.productId) === Number(productId));
+    if (!item) return;
+    const current = new Set(getCartItemToppings(item));
+    if (checked) current.add(toppingKey);
+    else current.delete(toppingKey);
+    item.toppings = Array.from(current);
+    persistCartItem(productId);
+    if (!isLoggedInUser()) syncGuestCartStorage();
+    renderAll();
+};
+
 async function loadCartFromServer() {
+    if (!isLoggedInUser()) {
+        renderCartFromGuestStorage();
+        return;
+    }
     try {
         const response = await fetch(API_BASE + "api/users/cart/getDataCart", {
             method: "GET",
@@ -1733,7 +1976,10 @@ async function loadCartFromServer() {
         const data = await response.json();
 
         // Cực kỳ quan trọng: Thêm thuộc tính isSelected mặc định là true cho mỗi sản phẩm
-        cartData = data.map(item => ({ ...item, size: item.size || "M", note: item.note || "", isSelected: true }));
+        cartData = data.map(item => ({
+            ...normalizeCartItemForGuest(item),
+            isSelected: true
+        }));
         await getDetailAccount();
 
         renderAll();
@@ -1751,11 +1997,21 @@ function renderAll() {
 function renderCart(products) {
     const container = document.getElementById('cart-container');
     if (!container) return;
-    container.innerHTML = "";
+    const allSelected = products.length > 0 && products.every(p => p.isSelected);
+    const selectedCount = products.filter(p => p.isSelected).length;
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:rgba(255,255,255,.72)">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:#0f172a;">
+                <input type="checkbox" ${allSelected ? 'checked' : ''} onchange="toggleSelectAll(this.checked)" />
+                Chọn tất cả
+            </label>
+            <span style="font-size:12px;color:#64748b">${selectedCount}/${products.length} đã chọn</span>
+        </div>`;
 
     products.forEach(product => {
         const selectedSize = getCartItemSize(product);
         const unitPrice = getCartItemPrice(product);
+        const itemQty = getCartItemQuantity(product);
         // Chú ý: Đã đưa item-checkbox-container VÀO TRONG cart-item
         const productHTML = `
             <div class="cart-item glass-deep" data-id="${product.productId}">
@@ -1765,7 +2021,7 @@ function renderCart(products) {
                            onchange="toggleCheck(${product.productId})" />
                 </div>
 
-                <img     style="width: 120px; height: 120px; object-fit: contain;" class="item-img" src="${API_BASE}${product.imageUrl}"/>
+                <img     style="width: 120px; height: 120px; object-fit: contain;" class="item-img" src="${resolveAssetUrl(product.imageUrl, '../binglogo.png')}"/>
                 <div class="item-details">
                     <h3 class="item-title">${product.productName}</h3>
                     <div class="cart-size-picker" style="display:flex;align-items:center;gap:6px;margin:8px 0 4px">
@@ -1786,13 +2042,32 @@ function renderCart(products) {
                     <textarea oninput="setCartItemNote(${product.productId}, this.value)"
                         placeholder="Ghi chú: ít đá, không đường..."
                         style="width:100%;min-height:42px;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-size:12px;resize:vertical;outline:none;background:rgba(255,255,255,.7)">${escapeHtml(product.note || '')}</textarea>
+                    <div style="margin-top:8px;padding:10px 10px 6px;border:1px dashed #cbd5e1;border-radius:12px;background:rgba(255,255,255,.55)">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+                            <span style="font-size:12px;font-weight:700;color:#0f172a">Topping thêm</span>
+                            <span style="font-size:11px;color:#64748b">${getCartItemToppings(product).length} đã chọn</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr;gap:6px">
+                            ${TOPPING_OPTIONS.map(t => `
+                                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:#334155">
+                                    <input type="checkbox" ${getCartItemToppings(product).includes(t.key) ? 'checked' : ''}
+                                           onchange="toggleCartItemTopping(${product.productId}, '${t.key}', this.checked)"
+                                           style="margin-top:3px;accent-color:var(--primary)">
+                                    <span style="flex:1">
+                                        <b>${t.icon} ${t.label}</b>
+                                        <span style="display:block;font-size:11px;color:#64748b">+${t.price.toLocaleString('vi-VN')}đ</span>
+                                    </span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
                     <div class="item-actions">
                         <span class="item-price">${unitPrice.toLocaleString('vi-VN')}đ</span>
                         <div class="qty-control">
                             <button class="qty-btn" onclick="updateQty(${product.productId}, -1)">
                                 <span class="material-symbols-outlined">remove</span>
                             </button>
-                            <span class="qty-num">${product.totalQuantity}</span>
+                            <span class="qty-num">${itemQty}</span>
                             <button class="qty-btn" onclick="updateQty(${product.productId}, 1)">
                                 <span class="material-symbols-outlined">add</span>
                             </button>
@@ -1836,7 +2111,7 @@ function renderOrderSummary(products) {
     if (!summaryContainer) return;
 
     const selectedItems = products.filter(p => p.isSelected);
-    const subtotal = selectedItems.reduce((sum, p) => sum + (getCartItemPrice(p) * (p.totalQuantity || 0)), 0);
+    const subtotal = selectedItems.reduce((sum, p) => sum + (getCartItemPrice(p) * getCartItemQuantity(p)), 0);
     const shippingFee = (deliveryMode === 'ship' && subtotal > 0) ? 15000 : 0;
 
     // Tính discount TRƯỚC
@@ -1950,6 +2225,7 @@ function renderOrderSummary(products) {
         <div class="summary-row" style="color:red"><span>Giảm giá</span><strong>-${discount.toLocaleString('vi-VN')}đ</strong></div>
         ${pointDiscount > 0 ? `<div class="summary-row" style="color:#0f766e"><span>Đổi điểm</span><strong>-${pointDiscount.toLocaleString('vi-VN')}đ</strong></div>` : ''}
         <div class="summary-row total"><span>Tổng cộng</span><span class="total-price">${total.toLocaleString('vi-VN')}đ</span></div>
+        ${!isLoggedInUser() ? `<div style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.5;border:1px solid #fed7aa">Đăng nhập để thanh toán và đồng bộ giỏ hàng vào tài khoản.</div>` : ''}
         <button class="checkout-btn" ${subtotal===0?'disabled':''} style="${subtotal===0?'opacity:.5;cursor:not-allowed;':''}">
             Thanh toán ngay
         </button>
@@ -2458,9 +2734,11 @@ async function fetchVouchers() {
             code:        row.code,
             name:        `Giảm ${row.discountPercent}%`,
             percent:     row.discountPercent,
+            minOrderAmount: Number(row.minOrderAmount || row.minAmount || 0),
+            applyToAll: Boolean(row.applyToAll || row.scope === 'all'),
             // Tính value dựa trên subtotal hiện tại
             value:       Math.round(getCurrentSubtotal() * row.discountPercent / 100),
-            description: `Giảm ${row.discountPercent}% cho đơn hàng`,
+            description: `Giảm ${row.discountPercent}% cho đơn hàng${Number(row.minOrderAmount || row.minAmount || 0) > 0 ? ` từ ${Number(row.minOrderAmount || row.minAmount || 0).toLocaleString('vi-VN')}đ` : ''}`,
         }));
 
         tempVoucher = appliedVoucher || null;
@@ -2472,7 +2750,7 @@ async function fetchVouchers() {
 }
 function getCurrentSubtotal() {
     const selectedItems = cartData.filter(p => p.isSelected);
-    return selectedItems.reduce((sum, p) => sum + (p.price * (p.totalQuantity || 0)), 0);
+    return selectedItems.reduce((sum, p) => sum + (p.price * getCartItemQuantity(p)), 0);
 }
 function renderVoucherList() {
     const el = document.getElementById('v-list');
@@ -2488,7 +2766,7 @@ function renderVoucherList() {
             style="border:1.5px solid ${tempVoucher?.code===v.code ? 'var(--primary)' : '#eee'};
                    background:${tempVoucher?.code===v.code ? '#fff5f5' : 'white'};
                    border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;
-                   display:flex;justify-content:space-between;align-items:center;transition:border-color .15s">
+                   display:flex;justify-content:space-between;align-items:center;transition:border-color .15s;opacity:${getCurrentSubtotal() >= (v.minOrderAmount || 0) ? 1 : 0.82}">
             <div>
                 <div style="font-size:14px;font-weight:500;color:var(--primary)">
                     Giảm ${v.percent}%
@@ -2498,6 +2776,8 @@ function renderVoucherList() {
                     &nbsp;·&nbsp;
                     Tiết kiệm ${v.value.toLocaleString('vi-VN')}đ
                 </div>
+                ${v.minOrderAmount > 0 ? `<div style="font-size:11px;color:#64748b;margin-top:4px">Đơn tối thiểu ${v.minOrderAmount.toLocaleString('vi-VN')}đ</div>` : ''}
+                <div style="font-size:11px;color:#64748b;margin-top:2px">${v.applyToAll ? 'Áp dụng cho tất cả người dùng' : 'Áp dụng cho người dùng cụ thể'}</div>
             </div>
             <div style="width:20px;height:20px;border-radius:50%;flex-shrink:0;
                         border:2px solid ${tempVoucher?.code===v.code ? 'var(--primary)' : '#ddd'};
@@ -2508,7 +2788,12 @@ function renderVoucherList() {
 }
 
 window.selectTempVoucher = (code) => {
-    tempVoucher = vouchers.find(v => v.code === code) || null;
+    const found = vouchers.find(v => v.code === code) || null;
+    if (found && Number(getCurrentSubtotal()) < Number(found.minOrderAmount || 0)) {
+        showToast(`Đơn tối thiểu ${Number(found.minOrderAmount || 0).toLocaleString('vi-VN')}đ mới dùng được mã này`, 'error');
+        return;
+    }
+    tempVoucher = found;
     renderVoucherList();
 };
 
@@ -2542,16 +2827,30 @@ window.closeVoucherModal = () => { const m = document.getElementById('voucher-mo
 // ==========================================
 window.toggleCheck = (productId) => {
     const item = cartData.find(p => p.productId === productId);
-    if (item) { item.isSelected = !item.isSelected; renderAll(); }
+    if (item) {
+        item.isSelected = !item.isSelected;
+        if (!isLoggedInUser()) syncGuestCartStorage();
+        renderAll();
+    }
+};
+
+window.toggleSelectAll = (checked) => {
+    cartData = cartData.map(item => ({ ...item, isSelected: checked }));
+    if (!isLoggedInUser()) syncGuestCartStorage();
+    renderAll();
 };
 
 window.updateQty = async (productId, change) => {
     const item = cartData.find(p => p.productId === productId);
     if (!item) return;
-    let newQty = Math.max(1, item.totalQuantity + change);
-    if (item.totalQuantity === newQty) return;
+    let newQty = Math.max(1, getCartItemQuantity(item) + change);
+    if (getCartItemQuantity(item) === newQty) return;
     item.totalQuantity = newQty;
     renderAll();
+    if (!isLoggedInUser()) {
+        syncGuestCartStorage();
+        return;
+    }
     try {
         const res = await fetch(`${API_BASE}api/users/cart`, {
             method: 'POST', credentials: 'include',
@@ -2590,6 +2889,10 @@ window.confirmRemoveItem = async (productId) => {
     closeModal();
     cartData = cartData.filter(p => p.productId !== productId);
     renderAll();
+    if (!isLoggedInUser()) {
+        syncGuestCartStorage();
+        return;
+    }
     try {
         await fetch(`${API_BASE}api/users/cart/deleteInCart?productId=${productId}`, {
             method: 'DELETE', credentials: 'include',
@@ -2597,6 +2900,31 @@ window.confirmRemoveItem = async (productId) => {
         });
     } catch (e) { console.error('Lỗi xoá:', e); }
 };
+
+async function removePurchasedItemsFromCart(productIds) {
+    const ids = Array.isArray(productIds) ? productIds.map(id => Number(id)).filter(Boolean) : [];
+    if (!ids.length) return;
+
+    if (!isLoggedInUser()) {
+        cartData = cartData.filter(item => !ids.includes(Number(item.productId)));
+        syncGuestCartStorage();
+        renderAll();
+        return;
+    }
+
+    await Promise.all(ids.map(async (productId) => {
+        try {
+            await fetch(`${API_BASE}api/users/cart/deleteInCart?productId=${productId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        } catch (e) {}
+    }));
+
+    cartData = cartData.filter(item => !ids.includes(Number(item.productId)));
+    renderAll();
+}
 
 window.closeModal = () => { const m = document.getElementById('custom-modal'); if (m) m.remove(); };
 // ==========================================
@@ -2636,7 +2964,7 @@ function getCheckoutCustomerInfo() {
 // Hàm tổng hợp payload gửi lên server
 function buildOrderPayload() {
     const selectedItems = cartData.filter(p => p.isSelected);
-    const subtotal = selectedItems.reduce((sum, p) => sum + (getCartItemPrice(p) * p.totalQuantity), 0);
+    const subtotal = selectedItems.reduce((sum, p) => sum + (getCartItemPrice(p) * getCartItemQuantity(p)), 0);
     const shippingFee = deliveryMode === 'ship' ? 15000 : 0;
 
     let discount = 0;
@@ -2664,10 +2992,11 @@ function buildOrderPayload() {
         voucherCode: appliedVoucher?.code || null,
         items: selectedItems.map(p => ({
             productId: p.productId,
-            quantity: p.totalQuantity,
+            quantity: getCartItemQuantity(p),
             price: getCartItemPrice(p),
             size: getCartItemSize(p),
-            note: p.note || null
+            note: p.note || null,
+            toppings: getCartItemToppings(p)
         })),
         subtotal,
         shippingFee,
@@ -2705,6 +3034,13 @@ window.requestOrderEmailSync = requestOrderEmailSync;
 document.addEventListener('click', async (e) => {
     if (!e.target.closest('.checkout-btn')) return;
 
+    if (!isLoggedInUser()) {
+        localStorage.setItem('postLoginRedirect', '#cart');
+        showToast('Bạn cần đăng nhập trước khi thanh toán', 'error');
+        window.location.href = getLoginPagePath();
+        return;
+    }
+
     const errorMsg = validateCheckout();
     if (errorMsg) {
         showToast(errorMsg, 'error');
@@ -2712,6 +3048,7 @@ document.addEventListener('click', async (e) => {
     }
 
     const payload = buildOrderPayload();
+    const purchasedProductIds = cartData.filter(p => p.isSelected).map(p => Number(p.productId));
     const btn = e.target.closest('.checkout-btn');
     btn.disabled = true;
     btn.textContent = 'Đang xử lý...';
@@ -2738,6 +3075,8 @@ document.addEventListener('click', async (e) => {
             userPointBalance = order.currentPoint;
             localStorage.setItem("userPointBalance", String(userPointBalance));
         }
+
+        await removePurchasedItemsFromCart(purchasedProductIds);
 
         console.log(">>> Đã lưu DB, Mã đơn hàng thật là:", realOrderCode);
         requestOrderEmailSync(realOrderCode, 'created', {
@@ -3206,6 +3545,7 @@ function openOrderDetailModal(orderId) {
         const price = item.price || 0;  // item.price là giá trong order_detail
         const qty = item.quantity || 1;
         const note = item.note || '';
+        const toppings = item.toppings || '';
         subtotal += price * qty;
 
         // Ảnh sản phẩm: lấy ảnh chính (isMain=true) hoặc ảnh đầu tiên
@@ -3228,6 +3568,7 @@ function openOrderDetailModal(orderId) {
               <div style="font-size:14px; font-weight:500;">${name}</div>
               <div style="font-size:13px; color:#888;">${price.toLocaleString('vi-VN')}₫</div>
               ${note ? `<div style="font-size:12px;color:#0f766e;margin-top:4px;">Ghi chú: ${escapeHtml(note)}</div>` : ''}
+              ${toppings ? `<div style="font-size:12px;color:#0369a1;margin-top:4px;">Topping: ${escapeHtml(toppings)}</div>` : ''}
             </div>
             <div style="font-weight:600; min-width:50px; text-align:right;">x${qty}</div>
           </div>

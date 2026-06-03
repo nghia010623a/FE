@@ -93,8 +93,7 @@
             from { transform: translateY(0); }
             to { transform: translateY(-10px); }
         }
-        /* Container chính */
-/* Container chính - bỏ overflow-hidden ở cha đi nhé */
+
 
     </style>
 </head>
@@ -121,8 +120,8 @@
     <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Trang chủ</a>
     <div id="menu-nav-wrapper" class="relative" onmouseenter="showMenuCategoryNav()" onmouseleave="hideMenuCategoryNav()">
     <a class="text-sm font-semibold hover:text-primary transition-colors" onclick="navigate(event, '#menu')" style="cursor: pointer;" >Thực đơn</a>
-    <div id="menu-category-hover" class="absolute top-full left-1/2 -translate-x-1/2 mt-4 hidden rounded-2xl border border-white/50 bg-white/90 backdrop-blur-xl shadow-xl p-3 min-w-[520px] z-[80]" onmouseenter="cancelMenuCategoryHide()" onmouseleave="hideMenuCategoryNav()">
-        <div class="grid grid-cols-3 gap-2 text-sm">
+    <div id="menu-category-hover" style="background-color: rgba(240, 248, 255, 0.181);backdrop-filter: blur(1px);" class="absolute top-full left-1/2 -translate-x-1/2 mt-4 hidden rounded-2xl border border-white/50 backdrop-blur-xl shadow-xl p-3 min-w-[190px] z-[80]" onmouseenter="cancelMenuCategoryHide()" onmouseleave="hideMenuCategoryNav()">
+        <div class="grid grid-cols-1 gap-2 text-sm">
             <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'all')">Tất cả</button>
             <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'best-seller')">Best seller</button>
             <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'1')">Trà sữa</button>

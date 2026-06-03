@@ -10,6 +10,7 @@ let cachedReviews = [];
 let cachedOrders = [];
 let cachedProducts = [];
 let cachedAccounts = [];
+let cachedAccountsComplete = false;
 // ============================================================
 //  GỌI API CHUNG
 // ============================================================
@@ -190,6 +191,7 @@ function openModal(id) {
   if (id === 'modal-cat' && editingCatId === null) resetCatForm();
   if (id === 'modal-banner' && editingBannerId === null) resetBannerForm();
   if (id === 'modal-promo' && editingPromoId === null) resetPromoForm();
+  if (id === 'modal-promo') syncPromoScopeUI();
   if (id === 'modal-ingr' && editingIngredientId === null) resetIngredientForm();
 }
 function closeModal(id) {
@@ -398,6 +400,8 @@ async function renderUsers(filter) {
     else if (filter === 'inactive') url += '?active=false';
     const users = await apiRequest(url);
     if (!users) return;
+    cachedAccounts = Array.isArray(users) ? users : [];
+    cachedAccountsComplete = filter === 'all';
     document.getElementById('users-table').innerHTML = users.map(u => `<tr>
       <td>#${u.id}</td><td><b>${u.username}</b></td><td>${u.email||''}</td>
       <td><span class="status-pill pill-blue">${u.role||'Khách hàng'}</span></td><td>⭐ ${u.point||0}</td>
@@ -478,6 +482,49 @@ function resetUserForm() {
   document.getElementById('u-role').value = 'Khách hàng';
 }
 
+async function ensureAccountsCache() {
+  if (cachedAccountsComplete && Array.isArray(cachedAccounts) && cachedAccounts.length) return cachedAccounts;
+  const accounts = await apiRequest('api/accounts');
+  cachedAccounts = Array.isArray(accounts) ? accounts : [];
+  cachedAccountsComplete = true;
+  return cachedAccounts;
+}
+
+function syncPromoScopeUI() {
+  const scope = document.getElementById('promo-scope');
+  const wrap = document.getElementById('promo-target-wrap');
+  if (!scope || !wrap) return;
+  wrap.style.display = scope.value === 'selected' ? 'block' : 'none';
+}
+
+function getPromoTargetUserIds() {
+  return Array.from(document.querySelectorAll('#promo-target-users input[type="checkbox"]:checked'))
+    .map(cb => Number(cb.value))
+    .filter(Number.isFinite);
+}
+
+async function renderPromoTargetUsers(selectedIds = []) {
+  const box = document.getElementById('promo-target-users');
+  if (!box) return;
+
+  const accounts = await ensureAccountsCache();
+  if (!accounts.length) {
+    box.innerHTML = '<div class="empty" style="padding:18px 10px"><i class="ti ti-users"></i>Không có người dùng để chọn</div>';
+    return;
+  }
+
+  const selected = new Set((selectedIds || []).map(id => Number(id)));
+  box.innerHTML = accounts.map(u => `
+    <label class="promo-target-item">
+      <input type="checkbox" value="${u.id}" ${selected.has(Number(u.id)) ? 'checked' : ''} style="margin-top:3px;accent-color:var(--lb5)">
+      <div>
+        <strong>${u.username || 'N/A'}</strong>
+        <span>${u.email || ''}</span>
+      </div>
+    </label>
+  `).join('');
+}
+
 // ============================================================
 //  PRODUCTS
 // ============================================================
@@ -487,7 +534,7 @@ async function renderProducts() {
     if (!products) return;
     document.getElementById('products-table').innerHTML = products.map(p => `<tr>
       <td>#${p.id}</td><td><b>${p.name}</b></td><td><span class="status-pill pill-blue">${p.categoryName||''}</span></td>
-      <td style="font-weight:700">${fmt(p.price)}đ</td><td>${stars(p.rating||0)}</td>
+      <td style="font-weight:700">${fmt(p.price)}đ</td><td><b>${Number(p.quantity ?? p.stockQuantity ?? 100)}</b></td><td>${stars(p.rating||0)}</td>
       <td>${statusPill(p.active?'active':'inactive')}</td>
       <td><div class="flex">
         <button class="btn btn-glass btn-sm btn-icon" onclick="editProduct(${p.id})"><i class="ti ti-edit"></i></button>
@@ -524,6 +571,7 @@ async function editProduct(id) {
         document.getElementById('p-name').value = p.name || '';
         document.getElementById('p-price').value = p.price || '';
         document.getElementById('p-cat').value = p.categoryId || p.cat || '';
+        document.getElementById('p-qty').value = p.quantity ?? p.stockQuantity ?? 100;
         document.getElementById('p-desc').value = p.description || '';
     }
     openModal('modal-product');
@@ -532,19 +580,20 @@ async function saveProduct() {
   const name = document.getElementById('p-name').value.trim();
   const price = parseInt(document.getElementById('p-price').value);
   const catId = document.getElementById('p-cat').value;
+  const quantity = parseInt(document.getElementById('p-qty').value);
   const desc = document.getElementById('p-desc').value;
   if (!name || !price) { toast('Vui lòng điền đầy đủ thông tin', 'error'); return; }
   try {
     if (editingProductId) {
       await apiRequest(`api/products/${editingProductId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name, price, categoryId: catId, description: desc })
+        body: JSON.stringify({ name, price, categoryId: catId, quantity: Number.isFinite(quantity) ? quantity : 100, description: desc })
       });
       toast('Đã cập nhật sản phẩm', 'success');
     } else {
       await apiRequest('api/products', {
         method: 'POST',
-        body: JSON.stringify({ name, price, categoryId: catId, description: desc })
+        body: JSON.stringify({ name, price, categoryId: catId, quantity: Number.isFinite(quantity) ? quantity : 100, description: desc })
       });
       toast('Đã thêm sản phẩm mới', 'success');
     }
@@ -576,6 +625,7 @@ async function deleteProd(id) {
 function resetProductForm() {
   document.getElementById('p-name').value = '';
   document.getElementById('p-price').value = '';
+  document.getElementById('p-qty').value = '100';
   document.getElementById('p-desc').value = '';
 }
 
@@ -707,10 +757,11 @@ async function renderBanners() {
   try {
     const banners = await apiRequest('api/banners');
     if (!banners) return;
-    const colors = ['linear-gradient(135deg,#7dd3fc,#38bdf8)','linear-gradient(135deg,#86efac,#4ade80)','linear-gradient(135deg,#fcd34d,#f59e0b)','linear-gradient(135deg,#f9a8d4,#ec4899)','linear-gradient(135deg,#c4b5fd,#8b5cf6)'];
     document.getElementById('banner-grid').innerHTML = banners.map((b,i) => `
       <div class="glass-card" style="margin:0;padding:16px">
-        <div class="banner-preview" style="background:${b.color||colors[i%colors.length]}">${b.name}</div>
+        <div class="banner-preview" style="overflow:hidden;background:#f8fafc">
+          ${b.imageUrl ? `<img src="${b.imageUrl.startsWith('http') ? b.imageUrl : `${API_BASE}${b.imageUrl}`}" alt="${b.name || 'banner'}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:700">${b.name}</div>`}
+        </div>
         <div class="flex" style="margin-bottom:6px"><span style="font-weight:700;font-size:13px;color:var(--text-dark);flex:1">${b.name}</span><label class="toggle"><input type="checkbox" ${b.active?'checked':''} onchange="toggleBanner(${b.id},this)"><span class="slider-sw"></span></label></div>
         <div style="font-size:11px;color:var(--text-light);margin-bottom:10px">Trang: <b>${b.site}</b> · Ưu tiên: <b>${b.priority}</b> · ${b.active?'<span style="color:#16a34a">Hiển thị</span>':'<span style="color:#dc2626">Ẩn</span>'}</div>
         <div class="flex"><button class="btn btn-glass btn-sm" style="flex:1" onclick="editBanner(${b.id})"><i class="ti ti-edit"></i> Sửa</button><button class="btn btn-danger btn-sm btn-icon" onclick="deleteBanner(${b.id})"><i class="ti ti-trash"></i></button></div>
@@ -830,7 +881,12 @@ async function renderPromotions() {
       <div class="glass-card" style="margin:0;padding:16px">
         <div class="flex" style="margin-bottom:8px"><span class="promo-code">${p.code}</span><label class="toggle" style="margin-left:auto"><input type="checkbox" ${p.active?'checked':''} onchange="togglePromo(${p.id},this)"><span class="slider-sw"></span></label></div>
         <div class="flex" style="margin-bottom:6px"><span class="promo-disc">-${p.discountPercent||p.pct}%</span><span style="font-size:11px;color:var(--text-light)">· Còn ${p.quantity||p.qty} lượt</span></div>
-        <div style="font-size:11px;color:var(--text-light);margin-bottom:10px">HH: ${p.endDate||p.end} · ${p.active?'<span style="color:#16a34a">Đang hoạt động</span>':'<span style="color:#dc2626">Tắt</span>'}</div>
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:6px">Đơn tối thiểu: <b>${fmt(Number(p.minOrderAmount || p.minAmount || 0))}đ</b></div>
+        <div style="font-size:11px;color:var(--text-light);margin-bottom:10px">
+          Phạm vi: <b>${(p.applyToAll || p.scope === 'all') ? 'Tất cả người dùng' : `Chỉ ${Number(p.targetUserCount || (p.targetUsers || []).length || 0)} người dùng`}</b>
+          · Hết hạn: ${p.endDate||p.end}
+          · ${p.active?'<span style="color:#16a34a">Đang hoạt động</span>':'<span style="color:#dc2626">Tắt</span>'}
+        </div>
         <div class="flex"><button class="btn btn-glass btn-sm" style="flex:1" onclick="editPromo(${p.id})"><i class="ti ti-edit"></i> Sửa</button><button class="btn btn-danger btn-sm btn-icon" onclick="deletePromo(${p.id})"><i class="ti ti-trash"></i></button></div>
       </div>`).join('');
   } catch (e) {}
@@ -840,11 +896,16 @@ async function editPromo(id) {
   editingPromoId = id;
   try {
     const p = await apiRequest(`api/promotions/${id}`);
+    await ensureAccountsCache();
     document.getElementById('promo-code').value = p.code || '';
     document.getElementById('promo-pct').value = p.discountPercent || p.pct || '';
     document.getElementById('promo-qty').value = p.quantity || p.qty || '';
+    document.getElementById('promo-min').value = p.minOrderAmount || p.minAmount || 0;
+    document.getElementById('promo-scope').value = (p.applyToAll || p.scope === 'all') ? 'all' : 'selected';
     document.getElementById('promo-start').value = p.startDate || p.start || '';
     document.getElementById('promo-end').value = p.endDate || p.end || '';
+    syncPromoScopeUI();
+    await renderPromoTargetUsers(p.targetUserIds || []);
     openModal('modal-promo');
   } catch (e) {}
 }
@@ -853,15 +914,23 @@ async function savePromo() {
   const code = document.getElementById('promo-code').value.trim().toUpperCase();
   const pct = parseInt(document.getElementById('promo-pct').value);
   const qty = parseInt(document.getElementById('promo-qty').value);
+  const minOrderAmount = parseInt(document.getElementById('promo-min').value || '0');
+  const applyToAll = document.getElementById('promo-scope').value === 'all';
+  const userIds = applyToAll ? [] : getPromoTargetUserIds();
   const start = document.getElementById('promo-start').value;
   const end = document.getElementById('promo-end').value;
   if (!code || !pct || !qty || !end) { toast('Vui lòng điền đầy đủ', 'error'); return; }
+  if (!applyToAll && !userIds.length) {
+    toast('Hãy chọn ít nhất một người dùng', 'error');
+    return;
+  }
   try {
+    const body = { code, discountPercent:pct, quantity:qty, minOrderAmount: Number.isFinite(minOrderAmount) ? minOrderAmount : 0, applyToAll, userIds, startDate:start, endDate:end };
     if (editingPromoId) {
-      await apiRequest(`api/promotions/${editingPromoId}`, { method: 'PATCH', body: JSON.stringify({ code, discountPercent:pct, quantity:qty, startDate:start, endDate:end }) });
+      await apiRequest(`api/promotions/${editingPromoId}`, { method: 'PATCH', body: JSON.stringify(body) });
       toast('Đã cập nhật mã', 'success');
     } else {
-      await apiRequest('api/promotions', { method: 'POST', body: JSON.stringify({ code, discountPercent:pct, quantity:qty, startDate:start, endDate:end }) });
+      await apiRequest('api/promotions', { method: 'POST', body: JSON.stringify(body) });
       toast('Đã tạo mã mới', 'success');
     }
     closeModal('modal-promo');
@@ -889,7 +958,11 @@ async function deletePromo(id) {
 }
 
 function resetPromoForm() {
-  ['promo-code','promo-pct','promo-qty','promo-start','promo-end'].forEach(id => { document.getElementById(id).value = ''; });
+  ['promo-code','promo-pct','promo-qty','promo-min','promo-start','promo-end'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const scope = document.getElementById('promo-scope');
+  if (scope) scope.value = 'all';
+  syncPromoScopeUI();
+  renderPromoTargetUsers([]);
 }
 
 // ============================================================
@@ -1229,6 +1302,12 @@ async function init() {
     const cats = await apiRequest('api/categories?active=true');
     if (cats) document.getElementById('p-cat').innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   } catch (e) {}
+  ensureAccountsCache().catch(() => {});
+  const promoScope = document.getElementById('promo-scope');
+  if (promoScope) {
+    promoScope.addEventListener('change', syncPromoScopeUI);
+    syncPromoScopeUI();
+  }
   loadNotificationRecipients();
   renderNotifHistory();
   dailyReportLastRunKey = localStorage.getItem('bingchun_last_daily_report_key') || null;

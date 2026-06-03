@@ -328,6 +328,27 @@ input:checked+.slider-sw::before{transform:translateX(18px)}
 /* PROMO CARD */
 .promo-code{font-family:monospace;font-size:15px;font-weight:700;color:var(--lb6);letter-spacing:1px}
 .promo-disc{font-size:22px;font-weight:800;color:var(--lb5)}
+.promo-target-list{
+  max-height:180px;
+  overflow:auto;
+  background:rgba(255,255,255,0.5);
+  border:1px solid var(--border-g);
+  border-radius:12px;
+  padding:10px;
+  display:grid;
+  gap:8px;
+}
+.promo-target-item{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.45);
+  border:1px solid rgba(255,255,255,0.25);
+}
+.promo-target-item strong{font-size:13px;color:var(--text-dark)}
+.promo-target-item span{font-size:11px;color:var(--text-light);display:block;margin-top:2px}
 
 /* EMPTY */
 .empty{text-align:center;padding:40px;color:var(--text-light);font-size:13px}
@@ -580,7 +601,7 @@ textarea.form-control{resize:vertical;min-height:80px}
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>ID</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Rating</th><th>Trạng thái</th><th>Thao tác</th></tr>
+              <tr><th>ID</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Tồn kho</th><th>Rating</th><th>Trạng thái</th><th>Thao tác</th></tr>
             </thead>
             <tbody id="products-table"></tbody>
           </table>
@@ -780,6 +801,12 @@ textarea.form-control{resize:vertical;min-height:80px}
         </select>
       </div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Số lượng tồn</label><input class="form-control" id="p-qty" type="number" min="0" value="100" placeholder="100"></div>
+      <div class="form-group"><label class="form-label">Trạng thái bán</label>
+        <input class="form-control" value="Đang dùng quantity" disabled>
+      </div>
+    </div>
     <div class="form-group"><label class="form-label">Mô tả</label><textarea class="form-control" id="p-desc" rows="3" placeholder="Mô tả sản phẩm..."></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-glass" onclick="closeModal('modal-product')">Hủy</button>
@@ -846,6 +873,22 @@ textarea.form-control{resize:vertical;min-height:80px}
     <div class="form-row">
       <div class="form-group"><label class="form-label">Số lượng</label><input class="form-control" id="promo-qty" type="number" placeholder="100"></div>
       <div class="form-group"><label class="form-label">Ngày hết hạn</label><input class="form-control" id="promo-end" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Đơn tối thiểu</label><input class="form-control" id="promo-min" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Phạm vi áp dụng</label>
+        <select class="form-control" id="promo-scope">
+          <option value="all">Tất cả người dùng</option>
+          <option value="selected">Chỉ người dùng cụ thể</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="promo-target-wrap">
+      <label class="form-label">Người dùng được áp dụng</label>
+      <div class="promo-target-list" id="promo-target-users">
+        <div class="empty" style="padding:18px 10px"><i class="ti ti-users"></i>Đang tải danh sách người dùng</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-light);margin-top:6px">Chỉ dùng khi chọn "Chỉ người dùng cụ thể".</div>
     </div>
     <div class="form-group"><label class="form-label">Ngày bắt đầu</label><input class="form-control" id="promo-start" type="date"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">

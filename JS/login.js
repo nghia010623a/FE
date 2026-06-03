@@ -11,10 +11,64 @@ function showErrorModal(text) {
     const modal = document.getElementById('errorModal');
     modal.style.display = 'none';
   }
-  document.getElementById("loginwithgoogle").addEventListener("click", function () {
+document.getElementById("loginwithgoogle").addEventListener("click", function () {
     // URL này là mặc định của Spring Security
     window.location.href = API_BASE+"oauth2/authorization/google?prompt=select_account";
     });
+
+const GUEST_CART_KEY = 'bingchun_guest_cart';
+
+function getGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    const cart = raw ? JSON.parse(raw) : [];
+    return Array.isArray(cart) ? cart : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function getLoginRedirectUrl(target) {
+  if (!target) return null;
+  if (target.startsWith('http')) return target;
+  if (target.startsWith('#')) return `../index.html${target}`;
+  return target;
+}
+
+async function mergeGuestCartIntoServer() {
+  const guestCart = getGuestCart();
+  if (!guestCart.length) return;
+
+  const grouped = new Map();
+  for (const rawItem of guestCart) {
+    const item = {
+      productId: Number(rawItem.productId),
+      totalQuantity: Number(rawItem.totalQuantity || rawItem.quantity || 1),
+      size: (rawItem.size || 'M').toUpperCase() === 'L' ? 'L' : 'M',
+      note: rawItem.note || ''
+    };
+    const key = `${item.productId}|${item.size}|${item.note}`;
+    const current = grouped.get(key) || item;
+    current.totalQuantity += grouped.has(key) ? item.totalQuantity : 0;
+    grouped.set(key, current);
+  }
+
+  for (const item of grouped.values()) {
+    await fetch(API_BASE + "api/users/cart", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: item.productId,
+        quantity: item.totalQuantity,
+        size: item.size,
+        note: item.note
+      })
+    }).catch(() => null);
+  }
+
+  localStorage.removeItem(GUEST_CART_KEY);
+}
 
 async function loadCaptcha() {
   const img = document.getElementById("captchaImage");
@@ -86,13 +140,14 @@ async function checkLogin()
 
             if(data.role=="ADMIN")
             {
-
-              window.location.href="admin.html";
-              localStorage.setItem("imageUser", data.imageUser);
+            localStorage.setItem("imageUser", data.imageUser);
             localStorage.setItem("loginWithGoogle", data.loginWithGoogle);
             localStorage.setItem("isUpdateProfile", data.isUpdateProfile);
             localStorage.setItem("email", data.email);
             localStorage.setItem("currentUser", JSON.stringify(data.currentUser));
+            await mergeGuestCartIntoServer();
+              localStorage.removeItem('postLoginRedirect');
+              window.location.href="admin.html";
 
             }
             else{
@@ -102,8 +157,16 @@ async function checkLogin()
             localStorage.setItem("isUpdateProfile", data.isUpdateProfile);
             localStorage.setItem("email", data.email);
             localStorage.setItem("currentUser", JSON.stringify(data.currentUser));
+            await mergeGuestCartIntoServer();
 
-                    window.location.href="loadingscreen.html";
+                    const redirectTarget = localStorage.getItem('postLoginRedirect');
+                    if (redirectTarget) {
+                      localStorage.removeItem('postLoginRedirect');
+                      window.location.href = getLoginRedirectUrl(redirectTarget);
+                    } else {
+                      localStorage.removeItem('postLoginRedirect');
+                      window.location.href="loadingscreen.html";
+                    }
 
 
 
@@ -173,6 +236,3 @@ var loginLink = document.getElementById('signup-link');
     });
   
   });
-
-
-
