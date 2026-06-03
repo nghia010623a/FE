@@ -1065,7 +1065,6 @@ async function initDynamicMenu() {
                 </svg>`;
     };
 
-    // ── 3. CARD SẢN PHẨM (Đã sửa link ảnh Ngrok) ──
     const createProductCard = (item) => {
         // Nối link ảnh chuẩn
         const fullImageUrl = API_BASE+`${item.imageUrl}`;
