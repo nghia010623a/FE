@@ -1028,7 +1028,30 @@ async function initDynamicMenu() {
     // 1. Load dữ liệu từ Server
     const viewsData = await loadProduct();
     if (!Array.isArray(viewsData)) return;
-
+    const featuredCards = document.querySelectorAll('.product-card[data-product-id]');
+        
+    featuredCards.forEach(card => {
+        const pid = card.getAttribute('data-product-id');
+        // ĐÃ SỬA: dùng viewsData thay vì data
+        const product = viewsData.find(p => String(p.productId) === String(pid));
+        
+        if (product) {
+            // Đổ sao SVG vào container
+            const ratingBox = card.querySelector('.featured-rating-container');
+            if (ratingBox) {
+                ratingBox.innerHTML = `
+                    ${renderStars(product.rating)} 
+                    <span style="font-size:12px;color:#7a8aaa;font-weight:600">
+                        ${Number(product.rating || 0).toFixed(1)}
+                    </span>
+                `;
+            }
+            // Cập nhật luôn giá từ DB
+            const priceBox = card.querySelector('.featured-price');
+            if (priceBox) {
+                priceBox.innerText = Number(product.price).toLocaleString('vi-VN') + 'đ';
+            }
+        }})
     // ── 2. KHÔI PHỤC HÀM VẼ SAO (RENDER STARS) ──
     const renderStars = (rating = 5) => {
         const S = 14, GAP = 3, H = 16;
@@ -1113,7 +1136,6 @@ async function initDynamicMenu() {
                     ${Number(item.price).toLocaleString('en-US')}đ
                     </span>
 
-                    <!-- SỬA TẠI ĐÂY: id="addCart" -> class="add-to-cart-btn" và thêm data-product-id -->
                     <button
                         style="background-color:rgba(111, 172, 216)"
                         class="add-to-cart-btn w-12 h-12 rounded-2xl text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
@@ -1574,30 +1596,39 @@ function updateCartBadgeUI(count) {
 
 // 4. Gắn sự kiện Click toàn cục (Event Delegation)
 document.addEventListener('click', async (e) => {
-    // Tìm xem cú click có nằm trong hoặc là nút add-to-cart không
+    // 1. Tìm nút bấm
     const btn = e.target.closest('.add-to-cart-btn');
+    if (!btn) return;
 
-    if (btn) {
-        e.preventDefault(); // Ngăn chặn hành vi mặc định nếu là thẻ a
+    e.preventDefault();
 
-        // Lấy ID sản phẩm từ data attribute
-        const productId = btn.getAttribute('data-product-id');
-        if (!productId) return;
+    // 2. Lấy ID sản phẩm
+    const productId = btn.getAttribute('data-product-id');
+    if (!productId) return;
 
-        // Tìm ảnh sản phẩm trong cùng card để làm hiệu ứng bay
-        const productCard = btn.closest('.glass-card');
-        const productImg = productCard.querySelector('img'); // Lấy ảnh chính đầu tiên
+    // 3. TÌM THẺ CHA (Sửa lỗi ở đây: tìm cả glass-card hoặc product-card)
+    const productCard = btn.closest('.glass-card') || btn.closest('.product-card');
+    
+    // 4. Lấy ảnh sản phẩm và icon giỏ hàng
+    const productImg = productCard ? productCard.querySelector('img') : null;
+    const cartIcon = document.getElementById('cart-icon');
 
-        // Tìm icon giỏ hàng trên header làm đích đến (đảm bảo ID này đúng)
-        const cartIcon = document.getElementById('cart-icon');
-
-        // CHẠY HIỆU ỨNG BAY TRƯỚC (Cho cảm giác mượt mà, ko đợi API)
+    // 5. CHẠY HIỆU ỨNG (Chỉ chạy nếu tìm thấy cả ảnh và đích đến)
+    if (productImg && cartIcon && typeof animateFlyToCart === "function") {
         animateFlyToCart(productImg, cartIcon);
-
-        // GỌI API POST ĐỂ LƯU TRÊN SERVER
-        await addToCartApi(productId);
+    } else {
+        console.warn("Không tìm thấy ảnh hoặc icon giỏ hàng để làm hiệu ứng bay!");
     }
+
+    // 6. GỌI API
+    await addToCartApi(productId);
 });
+
+
+
+
+
+
 
 // --- KHỞI TẠO KHI LOAD TRANG ---
 async function initCartBadgeOnLoad() {
