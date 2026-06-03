@@ -1,3 +1,3 @@
-const API_BASE = "https://sie-nova-fee-elimination.trycloudflare.com/";
+const API_BASE = "https://eligible-liz-reprints-authorized.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd

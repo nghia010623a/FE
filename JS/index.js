@@ -915,6 +915,105 @@ async function loadProduct() {
     }
 }
 
+let productSearchCache = [];
+let pendingMenuCategory = null;
+let menuCategoryHideTimer = null;
+
+async function ensureProductSearchCache() {
+    if (!productSearchCache.length) {
+        productSearchCache = await loadProduct();
+    }
+    return productSearchCache;
+}
+
+window.toggleProductSearch = async function(event) {
+    if (event) event.stopPropagation();
+    const panel = document.getElementById('productSearchPanel');
+    const input = document.getElementById('productSearchInput');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) {
+        await ensureProductSearchCache();
+        if (input) {
+            input.focus();
+            renderProductSearchSuggestions(input.value);
+        }
+    }
+};
+
+window.renderProductSearchSuggestions = async function(query) {
+    const box = document.getElementById('productSearchResults');
+    if (!box) return;
+    const products = await ensureProductSearchCache();
+    const keyword = (query || '').trim().toLowerCase();
+    if (!keyword) {
+        box.innerHTML = '<div style="padding:14px;color:#64748b;font-size:13px">Gõ tên sản phẩm để tìm nhanh.</div>';
+        return;
+    }
+
+    const results = products
+        .filter(p => String(p.productName || '').toLowerCase().includes(keyword))
+        .slice(0, 8);
+    box.innerHTML = results.length ? results.map(p => `
+        <button type="button" onclick="openSearchProduct(${p.productId})"
+            style="width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:9px;border-radius:12px;cursor:pointer">
+            <img src="${API_BASE}${p.imageUrl || ''}" style="width:42px;height:42px;border-radius:10px;object-fit:contain;background:#f8fafc">
+            <span style="flex:1;min-width:0">
+                <b style="display:block;color:#0f172a;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(p.productName || '')}</b>
+                <span style="font-size:12px;color:#0284c7">${Number(p.price || 0).toLocaleString('vi-VN')}đ</span>
+            </span>
+        </button>
+    `).join('') : '<div style="padding:14px;color:#64748b;font-size:13px">Không tìm thấy sản phẩm phù hợp.</div>';
+};
+
+window.openSearchProduct = function(productId) {
+    document.getElementById('productSearchPanel')?.classList.add('hidden');
+    openProductDetailModal(productId);
+};
+
+window.showMenuCategoryNav = function() {
+    if (menuCategoryHideTimer) {
+        clearTimeout(menuCategoryHideTimer);
+        menuCategoryHideTimer = null;
+    }
+    document.getElementById('menu-category-hover')?.classList.remove('hidden');
+};
+
+window.hideMenuCategoryNav = function() {
+    if (menuCategoryHideTimer) clearTimeout(menuCategoryHideTimer);
+    menuCategoryHideTimer = setTimeout(() => {
+        document.getElementById('menu-category-hover')?.classList.add('hidden');
+    }, 180);
+};
+
+window.cancelMenuCategoryHide = function() {
+    if (menuCategoryHideTimer) {
+        clearTimeout(menuCategoryHideTimer);
+        menuCategoryHideTimer = null;
+    }
+};
+
+window.selectHoverCategory = function(event, categoryId) {
+    pendingMenuCategory = categoryId;
+    window.cancelMenuCategoryHide();
+    document.getElementById('menu-category-hover')?.classList.add('hidden');
+    navigate(event, '#menu');
+    setTimeout(() => {
+        if (typeof window.renderMenuCategory === 'function') {
+            window.renderMenuCategory(categoryId);
+        }
+    }, 250);
+};
+
+document.addEventListener('click', (event) => {
+    const panel = document.getElementById('productSearchPanel');
+    const toggle = document.getElementById('productSearchToggle');
+    if (!panel || panel.classList.contains('hidden')) return;
+    if (!panel.contains(event.target) && !toggle?.contains(event.target)) {
+        panel.classList.add('hidden');
+    }
+});
+
 
 
 // ==========================================
@@ -1036,11 +1135,17 @@ async function initDynamicMenu() {
 
     // ── 4. LOGIC RENDER (Hỗ trợ "all" và filter) ──
     const renderContent = (categoryId) => {
+        pendingMenuCategory = categoryId;
+        categoryBtns.forEach(btn => {
+            btn.classList.toggle("active", btn.getAttribute("data-category") === String(categoryId));
+        });
         renderContainer.style.opacity = 0;
         setTimeout(() => {
             let items = [];
             if (categoryId === "all") {
                 items = viewsData;
+            } else if (categoryId === "best-seller") {
+                items = viewsData.filter(item => Number(item.rating || 0) >= 4);
             } else {
                 items = viewsData.filter(item => {
                     return Number(item.category) === Number(categoryId);
@@ -1062,14 +1167,72 @@ async function initDynamicMenu() {
             renderContent(id);
         });
     });
+    window.renderMenuCategory = renderContent;
 
     // Mặc định load "Tất cả" sản phẩm khi vào trang
-    renderContent("all");
+    renderContent(pendingMenuCategory || "all");
 }
 
 function simpleStarText(rating) {
     const n = Math.max(0, Math.min(5, Number(rating || 0)));
     return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+window.__productReviewModalState = null;
+window.filterProductReviews = function(filter) {
+    if (!window.__productReviewModalState) return;
+    window.__productReviewModalState.filter = filter;
+    renderProductReviewModal(window.__productReviewModalState);
+};
+
+function renderProductReviewModal(state) {
+    const content = document.getElementById('product-reviews-content');
+    if (!content) return;
+
+    const reviews = (state.reviews || []).filter(r => {
+        if (state.filter === 'all') return true;
+        return Number(r.rating || 0) === Number(state.filter);
+    });
+
+    const counts = {
+        all: state.reviews.length,
+        5: state.reviews.filter(r => Number(r.rating || 0) === 5).length,
+        4: state.reviews.filter(r => Number(r.rating || 0) === 4).length,
+        3: state.reviews.filter(r => Number(r.rating || 0) === 3).length
+    };
+
+    content.innerHTML = `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+          ${[
+            ['all', `Tất cả (${counts.all})`],
+            ['5', `5 sao (${counts[5]})`],
+            ['4', `4 sao (${counts[4]})`],
+            ['3', `3 sao (${counts[3]})`],
+            ['2', '2 sao'],
+            ['1', '1 sao']
+          ].map(([key, label]) => `
+            <button type="button" onclick="filterProductReviews('${key}')"
+              style="border:1px solid ${state.filter === key ? '#0ea5e9' : '#e2e8f0'};background:${state.filter === key ? '#e0f2fe' : '#fff'};color:#0f172a;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;">
+              ${label}
+            </button>
+          `).join('')}
+        </div>
+        ${reviews.length ? reviews.map(r => `
+          <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;background:#f8fafc;">
+            <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;">
+              <strong style="color:#0f172a;">${r.username || 'Người dùng'}</strong>
+              <span style="color:#f59e0b;font-size:13px;">${simpleStarText(r.rating)}</span>
+            </div>
+            <div style="font-size:14px;color:#334155;line-height:1.45;">${r.content || ''}</div>
+            ${(r.replies || []).map(reply => `
+              <div style="margin-top:10px;margin-left:16px;padding:10px;border-left:3px solid #0ea5e9;background:white;border-radius:10px;">
+                <div style="font-weight:800;color:#0369a1;font-size:13px;">Admin ${reply.username || ''}</div>
+                <div style="font-size:13px;color:#334155;margin-top:3px;">${reply.content || ''}</div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('') : '<div style="text-align:center;color:#64748b;padding:28px;">Không có đánh giá ở mức sao này.</div>'}
+    `;
 }
 
 async function openProductReviewsModal(productId) {
@@ -1101,25 +1264,12 @@ async function openProductReviewsModal(productId) {
         });
         if (!res.ok) throw new Error('Không tải được đánh giá');
         const reviews = await res.json();
+        window.__productReviewModalState = { productId, reviews: reviews || [], filter: 'all' };
         if (!reviews.length) {
             content.innerHTML = '<div style="text-align:center;color:#64748b;padding:28px;">Sản phẩm chưa có đánh giá.</div>';
             return;
         }
-        content.innerHTML = reviews.map(r => `
-          <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:10px;background:#f8fafc;">
-            <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;">
-              <strong style="color:#0f172a;">${r.username || 'Người dùng'}</strong>
-              <span style="color:#f59e0b;font-size:13px;">${simpleStarText(r.rating)}</span>
-            </div>
-            <div style="font-size:14px;color:#334155;line-height:1.45;">${r.content || ''}</div>
-            ${(r.replies || []).map(reply => `
-              <div style="margin-top:10px;margin-left:16px;padding:10px;border-left:3px solid #0ea5e9;background:white;border-radius:10px;">
-                <div style="font-weight:800;color:#0369a1;font-size:13px;">Admin ${reply.username || ''}</div>
-                <div style="font-size:13px;color:#334155;margin-top:3px;">${reply.content || ''}</div>
-              </div>
-            `).join('')}
-          </div>
-        `).join('');
+        renderProductReviewModal(window.__productReviewModalState);
     } catch (error) {
         content.innerHTML = `<div style="text-align:center;color:#dc2626;padding:28px;">${error.message}</div>`;
     }
@@ -1498,11 +1648,46 @@ function getCartItemPrice(product) {
     return basePrice + (getCartItemSize(product) === "L" ? SIZE_L_SURCHARGE : 0);
 }
 
+const cartNoteTimers = new Map();
+
+async function persistCartItem(productId) {
+    const item = cartData.find(p => Number(p.productId) === Number(productId));
+    if (!item) return;
+
+    try {
+        await fetch(API_BASE + "api/users/cart", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                productId: Number(productId),
+                quantity: Number(item.totalQuantity || 1),
+                size: getCartItemSize(item),
+                note: item.note || ""
+            })
+        });
+    } catch (e) {
+        console.error("Không đồng bộ được giỏ hàng:", e);
+    }
+}
+
 window.setCartItemSize = (productId, size) => {
     const item = cartData.find(p => Number(p.productId) === Number(productId));
     if (!item) return;
     item.size = size === "L" ? "L" : "M";
+    persistCartItem(productId);
     renderAll();
+};
+
+window.setCartItemNote = (productId, note) => {
+    const item = cartData.find(p => Number(p.productId) === Number(productId));
+    if (!item) return;
+    item.note = note;
+    if (cartNoteTimers.has(productId)) clearTimeout(cartNoteTimers.get(productId));
+    cartNoteTimers.set(productId, setTimeout(() => {
+        persistCartItem(productId);
+        cartNoteTimers.delete(productId);
+    }, 450));
 };
 
 async function loadCartFromServer() {
@@ -1516,7 +1701,7 @@ async function loadCartFromServer() {
         const data = await response.json();
 
         // Cực kỳ quan trọng: Thêm thuộc tính isSelected mặc định là true cho mỗi sản phẩm
-        cartData = data.map(item => ({ ...item, size: item.size || "M", isSelected: true }));
+        cartData = data.map(item => ({ ...item, size: item.size || "M", note: item.note || "", isSelected: true }));
         await getDetailAccount();
 
         renderAll();
@@ -1566,6 +1751,9 @@ function renderCart(products) {
                             L +10k
                         </button>
                     </div>
+                    <textarea oninput="setCartItemNote(${product.productId}, this.value)"
+                        placeholder="Ghi chú: ít đá, không đường..."
+                        style="width:100%;min-height:42px;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;font-size:12px;resize:vertical;outline:none;background:rgba(255,255,255,.7)">${escapeHtml(product.note || '')}</textarea>
                     <div class="item-actions">
                         <span class="item-price">${unitPrice.toLocaleString('vi-VN')}đ</span>
                         <div class="qty-control">
@@ -2336,7 +2524,12 @@ window.updateQty = async (productId, change) => {
         const res = await fetch(`${API_BASE}api/users/cart`, {
             method: 'POST', credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ productId, quantity: newQty })
+            body: JSON.stringify({
+                productId,
+                quantity: newQty,
+                size: getCartItemSize(item),
+                note: item.note || ""
+            })
         });
         if (!res.ok) console.error('Lỗi cập nhật số lượng');
     } catch (e) { console.error('Lỗi mạng:', e); }
@@ -2397,6 +2590,17 @@ function validateCheckout() {
     return null; // null = hợp lệ
 }
 
+function getCheckoutCustomerInfo() {
+    const currentUser = getCurrentUser() || {};
+    const fallbackEmail = localStorage.getItem("email") || "";
+    const fallbackName = localStorage.getItem("username") || currentUser.name || "";
+    return {
+        customerName: (currentUser.username || currentUser.name || fallbackName || "Khách hàng").trim(),
+        customerEmail: (currentUser.email || fallbackEmail || "").trim(),
+        customerPhone: (currentUser.phone || currentUser.phonenum || "").trim()
+    };
+}
+
 // Hàm tổng hợp payload gửi lên server
 function buildOrderPayload() {
     const selectedItems = cartData.filter(p => p.isSelected);
@@ -2410,6 +2614,7 @@ function buildOrderPayload() {
     }
     const pointsUsed = getPointDiscount(subtotal, shippingFee, discount);
     const total = subtotal + shippingFee - discount - pointsUsed;
+    const customerInfo = getCheckoutCustomerInfo();
 
     // orderCode phải là số, dùng timestamp giảm bớt cho vừa int Java
     const orderCode = Math.floor(Date.now() / 1000); // Unix timestamp (số nhỏ hơn)
@@ -2419,6 +2624,9 @@ function buildOrderPayload() {
         amount: total,
         paymentMethod: payMethod,           // 'cod' | 'bank'
         deliveryMode,                        // 'ship' | 'takeaway'
+        customerName: customerInfo.customerName,
+        customerEmail: customerInfo.customerEmail,
+        customerPhone: customerInfo.customerPhone,
         address: deliveryMode === 'ship' ? selectedAddr : null,
         pickupTime: deliveryMode === 'takeaway' ? selectedPickup : null,
         voucherCode: appliedVoucher?.code || null,
@@ -2426,7 +2634,8 @@ function buildOrderPayload() {
             productId: p.productId,
             quantity: p.totalQuantity,
             price: getCartItemPrice(p),
-            size: getCartItemSize(p)
+            size: getCartItemSize(p),
+            note: p.note || null
         })),
         subtotal,
         shippingFee,
@@ -2435,6 +2644,30 @@ function buildOrderPayload() {
         total
     };
 }
+
+async function requestOrderEmailSync(orderId, action, extra = {}) {
+    const endpoints = [
+        `api/users/orders/${orderId}/emails/${action}`,
+        `api/orders/${orderId}/emails/${action}`,
+        `api/orders/${orderId}/notify-email`,
+        `api/orders/${orderId}/send-email`
+    ];
+
+    for (const endpoint of endpoints) {
+        try {
+            const res = await fetch(API_BASE + endpoint, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, action, ...extra })
+            });
+            if (res.ok) return await res.json().catch(() => null);
+        } catch (e) {}
+    }
+    return null;
+}
+
+window.requestOrderEmailSync = requestOrderEmailSync;
 
 // Gắn sự kiện cho nút checkout — dùng event delegation vì nút render động
 document.addEventListener('click', async (e) => {
@@ -2475,6 +2708,11 @@ document.addEventListener('click', async (e) => {
         }
 
         console.log(">>> Đã lưu DB, Mã đơn hàng thật là:", realOrderCode);
+        requestOrderEmailSync(realOrderCode, 'created', {
+            customerEmail: payload.customerEmail,
+            customerName: payload.customerName,
+            amount: payload.total
+        });
 
         // =========================================================
         // BƯỚC 2: XỬ LÝ THEO PHƯƠNG THỨC THANH TOÁN
@@ -2935,6 +3173,7 @@ function openOrderDetailModal(orderId) {
         const name = product.productName || 'Sản phẩm';
         const price = item.price || 0;  // item.price là giá trong order_detail
         const qty = item.quantity || 1;
+        const note = item.note || '';
         subtotal += price * qty;
 
         // Ảnh sản phẩm: lấy ảnh chính (isMain=true) hoặc ảnh đầu tiên
@@ -2956,6 +3195,7 @@ function openOrderDetailModal(orderId) {
             <div style="flex:1;">
               <div style="font-size:14px; font-weight:500;">${name}</div>
               <div style="font-size:13px; color:#888;">${price.toLocaleString('vi-VN')}₫</div>
+              ${note ? `<div style="font-size:12px;color:#0f766e;margin-top:4px;">Ghi chú: ${escapeHtml(note)}</div>` : ''}
             </div>
             <div style="font-weight:600; min-width:50px; text-align:right;">x${qty}</div>
           </div>

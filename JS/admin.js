@@ -67,6 +67,13 @@ const sectionTitles = {
   notifications: 'Thông báo', ingredients: 'Nguyên liệu', logs: 'Audit Log'
 };
 
+let currentRevenueRange = 'day';
+let currentReviewFilter = 'all';
+let currentReviewStarFilter = 'all';
+let cachedReviewRows = [];
+let dailyReportWatcher = null;
+let dailyReportLastRunKey = null;
+
 // ============================================================
 //  NAVIGATION
 // ============================================================
@@ -122,6 +129,49 @@ function fmt(n) { return n.toLocaleString('vi-VN'); }
 function now() { return new Date().toLocaleString('vi-VN'); }
 function nowTime() { return new Date().toLocaleTimeString('vi-VN'); }
 
+function getAdminProfile() {
+  try {
+    return typeof getCurrentUser === 'function' ? (getCurrentUser() || {}) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getAdminEmailFallback() {
+  const profile = getAdminProfile();
+  return (profile.email || localStorage.getItem('email') || '').trim();
+}
+
+function getDailyReportKey(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function tryEndpoints(urls, options) {
+  return urls.reduce((chain, url) => {
+    return chain.then(async (lastResult) => {
+      if (lastResult) return lastResult;
+      try {
+        const res = await fetch(API_BASE + url, {
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', ...(options?.headers || {}) },
+          ...options
+        });
+        if (!res.ok) return null;
+        return await res.json().catch(() => ({}));
+      } catch (e) {
+        return null;
+      }
+    });
+  }, Promise.resolve(null));
+}
+
+function setReportStatus(label, type = 'blue') {
+  const el = document.getElementById('report-status');
+  if (!el) return;
+  el.className = `status-pill pill-${type}`;
+  el.textContent = label;
+}
+
 // ============================================================
 //  MODAL & EDIT STATE
 // ============================================================
@@ -157,7 +207,8 @@ document.addEventListener('keydown', e => {
 // ============================================================
 //  DASHBOARD
 // ============================================================
-async function renderDashboard() {
+async function renderDashboard(range = currentRevenueRange) {
+  currentRevenueRange = range;
   try {
     const stats = await apiRequest('api/stats');
     if (stats) {
@@ -167,15 +218,172 @@ async function renderDashboard() {
         <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#fb923c,#ea580c)"><i class="ti ti-package"></i></div><div><div class="stat-val">${stats.products||0}</div><div class="stat-lbl">Sản phẩm</div></div></div>
         <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)"><i class="ti ti-ticket"></i></div><div><div class="stat-val">${stats.promos||0}</div><div class="stat-lbl">Mã giảm giá</div></div></div>`;
     }
-    const rev = await apiRequest('api/stats/revenue');
-    const days = ['T2','T3','T4','T5','T6','T7','CN'];
-    const vals = rev && rev.length === 7 ? rev : [3.2,5.1,4.8,7.2,6.5,9.1,8.3];
-    const mx = Math.max(...vals);
-    document.getElementById('rev-chart').innerHTML = vals.map(v => `<div class="bar" style="height:${Math.round((v/mx)*90)}px" title="${v}M VND"></div>`).join('');
-    document.getElementById('rev-labels').innerHTML = days.map(d => `<div class="bar-label" style="flex:1">${d}</div>`).join('');
+    const rev = await tryEndpoints([
+      `api/stats/revenue-report?period=${encodeURIComponent(range)}`,
+      `api/stats/revenue?range=${encodeURIComponent(range)}`,
+      'api/stats/revenue'
+    ], { method: 'GET' });
+    const labelsByRange = {
+      day: Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`),
+      week: ['T2','T3','T4','T5','T6','T7','CN'],
+      month: Array.from({ length: 31 }, (_, i) => `${i + 1}`)
+    };
+    const fallbackVals = {
+      day: [1.8, 2.2, 3.1, 2.9, 4.0, 3.6, 3.4, 2.8, 2.2, 1.9, 2.5, 3.0, 4.2, 5.1, 4.8, 5.9, 6.2, 5.4, 4.3, 3.8, 3.1, 2.7, 2.4, 2.0],
+      week: [3.2, 5.1, 4.8, 7.2, 6.5, 9.1, 8.3],
+      month: [8.2, 12.3, 9.7, 15.1, 18.4, 14.8, 22.3, 24.1, 19.8, 17.2, 13.9, 20.4, 16.1, 18.3, 21.5, 19.4, 15.3, 13.7, 12.9, 14.8, 16.2, 17.9, 20.1, 23.4, 18.8, 15.7, 14.6, 13.2, 12.5, 11.8, 10.9]
+    };
+    const report = rev && !Array.isArray(rev) ? rev : null;
+    const labels = report?.labels?.length ? report.labels : labelsByRange[range] || labelsByRange.week;
+    const vals = report?.values?.length ? report.values : (Array.isArray(rev) && rev.length ? rev : fallbackVals[range] || fallbackVals.week);
+    const chartLabels = vals.length === labels.length ? labels : labels.slice(0, vals.length);
+    const mx = Math.max(...vals, 1);
+    document.getElementById('rev-chart').innerHTML = vals.map(v => `<div class="bar" style="height:${Math.max(8, Math.round((v/mx)*90))}px" title="${Number(v).toLocaleString('vi-VN')}đ"></div>`).join('');
+    document.getElementById('rev-labels').innerHTML = chartLabels.map(d => `<div class="bar-label" style="flex:1">${d}</div>`).join('');
     const orders = await apiRequest('api/orders?limit=5');
     document.getElementById('dash-orders').innerHTML = orders && orders.length ? orders.map(o => `<tr><td><b>#${o.id}</b></td><td>${o.account||'N/A'}</td><td style="font-weight:700">${fmt(o.amount||0)}đ</td><td>${statusPill(o.status)}</td></tr>`).join('') : '<tr><td colspan="4">Chưa có đơn hàng</td></tr>';
+    await renderRevenueByProduct(range);
+    await refreshAdminReportConfig();
   } catch (e) {}
+}
+
+function filterRevenueRange(range, el) {
+  document.querySelectorAll('#revenue-tabs .tab-pill').forEach(p => p.classList.remove('active'));
+  if (el) el.classList.add('active');
+  currentRevenueRange = range;
+  renderDashboard(range);
+}
+
+async function renderRevenueByProduct(range = currentRevenueRange) {
+  const tbody = document.getElementById('revenue-products-table');
+  if (!tbody) return;
+
+  const data = await tryEndpoints([
+    `api/stats/revenue/products?range=${encodeURIComponent(range)}`,
+    `api/stats/revenue-by-product?range=${encodeURIComponent(range)}`,
+    `api/stats/products/revenue?range=${encodeURIComponent(range)}`
+  ], { method: 'GET' });
+
+  const rows = Array.isArray(data) ? data : [];
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light);padding:24px">Chưa có dữ liệu doanh thu theo sản phẩm</td></tr>';
+    return;
+  }
+
+  const totalRevenue = rows.reduce((sum, row) => sum + Number(row.revenue || row.amount || 0), 0) || 1;
+  tbody.innerHTML = rows.map((row, index) => {
+    const revenue = Number(row.revenue || row.amount || 0);
+    const orders = Number(row.orders || row.count || row.quantity || 0);
+    const share = Math.round((revenue / totalRevenue) * 100);
+    return `<tr>
+      <td><b>${row.productName || row.name || `Sản phẩm #${index + 1}`}</b></td>
+      <td>${orders}</td>
+      <td style="font-weight:700">${fmt(revenue)}đ</td>
+      <td><span class="status-pill pill-blue">${share}%</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function reloadRevenueByProduct() {
+  renderRevenueByProduct(currentRevenueRange);
+}
+
+async function downloadRevenueReport(format) {
+  const endpoint = format === 'excel'
+    ? `api/stats/revenue/export/excel?period=${encodeURIComponent(currentRevenueRange)}`
+    : `api/stats/revenue/export/pdf?period=${encodeURIComponent(currentRevenueRange)}`;
+  try {
+    const res = await fetch(API_BASE + endpoint, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`Lỗi ${res.status}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = format === 'excel'
+      ? `bingchun-revenue-${currentRevenueRange}.xlsx`
+      : `bingchun-revenue-${currentRevenueRange}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast(`Đã tải báo cáo ${format.toUpperCase()}`, 'success');
+  } catch (e) {
+    toast(`Không xuất được ${format.toUpperCase()}`, 'error');
+  }
+}
+
+async function refreshAdminReportConfig() {
+  const emailEl = document.getElementById('report-email');
+  const lastRunEl = document.getElementById('report-last-run');
+  const profile = getAdminProfile();
+  let email = (profile.email || localStorage.getItem('email') || '').trim();
+  if (!email) {
+    const serverProfile = await tryEndpoints(['api/accounts/me', 'api/users/me'], { method: 'GET' });
+    email = (serverProfile?.email || '').trim();
+  }
+  if (emailEl) emailEl.textContent = email || 'admin@example.com';
+
+  const lastKey = localStorage.getItem('bingchun_last_daily_report_key');
+  if (lastRunEl) lastRunEl.textContent = lastKey ? `Đã gửi ngày ${lastKey}` : 'Chưa có lịch gửi';
+  if (email) setReportStatus('Sẵn sàng', 'green');
+  else setReportStatus('Thiếu email', 'amber');
+}
+
+async function sendDailyRevenueReport(manual = false) {
+  const profile = getAdminProfile();
+  let email = (profile.email || localStorage.getItem('email') || '').trim();
+  if (!email) {
+    const serverProfile = await tryEndpoints(['api/accounts/me', 'api/users/me'], { method: 'GET' });
+    email = (serverProfile?.email || '').trim();
+  }
+  if (!email) {
+    toast('Không tìm thấy email admin để gửi báo cáo', 'error');
+    setReportStatus('Thiếu email', 'red');
+    return;
+  }
+
+  const reportDate = manual ? new Date() : new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const dateKey = getDailyReportKey(reportDate);
+  if (!manual && dailyReportLastRunKey === dateKey) return;
+
+  setReportStatus(manual ? 'Đang gửi...' : 'Tự động gửi...', 'amber');
+
+  const result = await tryEndpoints([
+    'api/admin/reports/daily-email',
+    'api/admin/reports/send-daily',
+    'api/reports/daily-email'
+  ], {
+    method: 'POST',
+    body: JSON.stringify({ email, date: dateKey, range: manual ? currentRevenueRange : 'day', manual })
+  });
+
+  if (result) {
+    dailyReportLastRunKey = dateKey;
+    localStorage.setItem('bingchun_last_daily_report_key', dateKey);
+    const lastRunEl = document.getElementById('report-last-run');
+    if (lastRunEl) lastRunEl.textContent = `Đã gửi ngày ${dateKey}`;
+    setReportStatus(manual ? 'Đã gửi' : 'Tự động gửi', 'green');
+    toast('Đã gửi báo cáo doanh thu', 'success');
+    return;
+  }
+
+  setReportStatus('Chưa có backend', 'red');
+  if (manual) toast('Chưa kết nối được endpoint báo cáo', 'error');
+}
+
+function startDailyReportWatcher() {
+  if (dailyReportWatcher) return;
+  const tick = async () => {
+    const now = new Date();
+    const todayKey = getDailyReportKey(now);
+    if (dailyReportLastRunKey === todayKey) return;
+    if (now.getHours() === 0 && now.getMinutes() < 5) setReportStatus('Đang chờ backend gửi', 'amber');
+  };
+  tick();
+  dailyReportWatcher = setInterval(tick, 60 * 1000);
 }
 
 // ============================================================
@@ -477,6 +685,9 @@ async function changeOrderStatus(id, sel) {
   if (!val) return;
   try {
     await apiRequest(`api/orders/${id}`, { method: 'PATCH', body: JSON.stringify({ status: val }) });
+    if (typeof requestOrderEmailSync === 'function') {
+      requestOrderEmailSync(id, val, { status: val, source: 'admin-panel' });
+    }
     renderOrders(currentOrderFilter);
     wsLog(`Đơn hàng #${id} chuyển trạng thái → ${val}`);
     toast('Đã cập nhật trạng thái', 'success');
@@ -513,6 +724,12 @@ async function editBanner(id) {
     const b = await apiRequest(`api/banners/${id}`);
     document.getElementById('bnr-name').value = b.name || '';
     document.getElementById('bnr-img').value = b.imageUrl || '';
+    document.getElementById('bnr-file').value = '';
+    const preview = document.getElementById('bnr-preview');
+    if (preview && b.imageUrl) {
+      preview.src = b.imageUrl.startsWith('http') ? b.imageUrl : `${API_BASE}${b.imageUrl}`;
+      preview.style.display = 'block';
+    }
     document.getElementById('bnr-site').value = b.site || '';
     document.getElementById('bnr-prio').value = b.priority || 1;
     document.getElementById('bnr-desc').value = b.description || '';
@@ -520,19 +737,51 @@ async function editBanner(id) {
   } catch (e) {}
 }
 
+async function uploadBannerFile(file) {
+  if (!file) return '';
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(API_BASE + 'api/banners/upload-image', {
+    method: 'POST',
+    credentials: 'include',
+    body: fd
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `Lỗi ${res.status}`);
+  }
+  const data = await res.json();
+  return data.url || data.imageUrl || '';
+}
+
 async function saveBanner() {
   const name = document.getElementById('bnr-name').value.trim();
   const site = document.getElementById('bnr-site').value.trim() || 'trang-chu';
   const priority = parseInt(document.getElementById('bnr-prio').value) || 1;
   const imageUrl = document.getElementById('bnr-img').value;
+  const fileInput = document.getElementById('bnr-file');
+  const file = fileInput?.files?.[0] || null;
   const description = document.getElementById('bnr-desc').value;
   if (!name) { toast('Vui lòng nhập tên banner', 'error'); return; }
   try {
+    let finalImageUrl = imageUrl;
+    if (file) {
+      finalImageUrl = await uploadBannerFile(file);
+      document.getElementById('bnr-img').value = finalImageUrl;
+    }
+    if (!finalImageUrl && editingBannerId) {
+      const existing = await apiRequest(`api/banners/${editingBannerId}`);
+      finalImageUrl = existing.imageUrl || '';
+    }
+    if (!finalImageUrl) {
+      toast('Vui lòng chọn ảnh hoặc nhập URL ảnh', 'error');
+      return;
+    }
     if (editingBannerId) {
-      await apiRequest(`api/banners/${editingBannerId}`, { method: 'PATCH', body: JSON.stringify({ bannerName:name, bannerSite:site, priority, bannerImage:imageUrl, description }) });
+      await apiRequest(`api/banners/${editingBannerId}`, { method: 'PATCH', body: JSON.stringify({ bannerName:name, bannerSite:site, priority, bannerImage:finalImageUrl, description }) });
       toast('Đã cập nhật banner', 'success');
     } else {
-      await apiRequest('api/banners', { method: 'POST', body: JSON.stringify({ bannerName:name, bannerSite:site, priority, bannerImage:imageUrl, description }) });
+      await apiRequest('api/banners', { method: 'POST', body: JSON.stringify({ bannerName:name, bannerSite:site, priority, bannerImage:finalImageUrl, description }) });
       toast('Đã thêm banner mới', 'success');
     }
     closeModal('modal-banner');
@@ -561,6 +810,13 @@ async function deleteBanner(id) {
 
 function resetBannerForm() {
   ['bnr-name','bnr-img','bnr-site','bnr-prio','bnr-desc'].forEach(id => { document.getElementById(id).value = ''; });
+  const file = document.getElementById('bnr-file');
+  if (file) file.value = '';
+  const preview = document.getElementById('bnr-preview');
+  if (preview) {
+    preview.src = '';
+    preview.style.display = 'none';
+  }
 }
 
 // ============================================================
@@ -639,16 +895,24 @@ function resetPromoForm() {
 // ============================================================
 //  REVIEWS
 // ============================================================
-let currentReviewFilter = 'all';
-async function renderReviews(filter) {
-  currentReviewFilter = filter;
-  try {
-    let url = 'api/reviews';
-    if (filter === 'active') url += '?active=true';
-    else if (filter === 'hidden') url += '?active=false';
-    const reviews = await apiRequest(url);
-    if (!reviews) return;
-    document.getElementById('reviews-table').innerHTML = reviews.map(r => `<tr>
+function renderFilteredReviews() {
+  const rows = cachedReviewRows.filter(r => {
+    const activeOk = currentReviewFilter === 'all'
+      || (currentReviewFilter === 'active' && r.active)
+      || (currentReviewFilter === 'hidden' && !r.active);
+    const starOk = currentReviewStarFilter === 'all' || Number(r.rating || 0) === Number(currentReviewStarFilter);
+    return activeOk && starOk;
+  });
+
+  const table = document.getElementById('reviews-table');
+  if (!table) return;
+  if (!rows.length) {
+    table.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:24px">Không có đánh giá phù hợp bộ lọc</td></tr>';
+    document.getElementById('rv-badge').textContent = '0';
+    return;
+  }
+
+  table.innerHTML = rows.map(r => `<tr>
       <td>#${r.id}</td><td><b>${r.productName||''}</b></td><td>${r.username||''}</td>
       <td>${stars(r.rating)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.content}</td>
       <td>${statusPill(r.active?'active':'inactive')}</td>
@@ -658,8 +922,27 @@ async function renderReviews(filter) {
         <button class="btn btn-danger btn-sm btn-icon" onclick="deleteReview(${r.id})"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`).join('');
-    document.getElementById('rv-badge').textContent = reviews.length;
+  document.getElementById('rv-badge').textContent = rows.length;
+}
+
+async function renderReviews(filter) {
+  currentReviewFilter = filter;
+  try {
+    let url = 'api/reviews';
+    if (filter === 'active') url += '?active=true';
+    else if (filter === 'hidden') url += '?active=false';
+    const reviews = await apiRequest(url);
+    if (!reviews) return;
+    cachedReviewRows = Array.isArray(reviews) ? reviews : [];
+    renderFilteredReviews();
   } catch (e) {}
+}
+
+function filterReviewStars(star, el) {
+  currentReviewStarFilter = star;
+  document.querySelectorAll('#review-tabs .tab-pill').forEach(p => p.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderFilteredReviews();
 }
 
 async function replyReview(id) {
@@ -948,8 +1231,11 @@ async function init() {
   } catch (e) {}
   loadNotificationRecipients();
   renderNotifHistory();
-  renderDashboard();
+  dailyReportLastRunKey = localStorage.getItem('bingchun_last_daily_report_key') || null;
+  await refreshAdminReportConfig();
+  renderDashboard(currentRevenueRange);
   connectAdminSocket();
+  startDailyReportWatcher();
   setTimeout(() => toast('Chào mừng Admin đến BingChun Panel', 'info'), 1600);
 }
 document.addEventListener('DOMContentLoaded', init);

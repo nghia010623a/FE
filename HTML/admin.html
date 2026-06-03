@@ -402,7 +402,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="nav-item" onclick="goSection('orders',this)">
         <i class="ti ti-shopping-cart"></i>Đơn hàng<span class="badge" id="order-badge">0</span>
       </div>
-      <div class="nav-item" onclick="goSection('banners',this)"><i class="ti ti-photo"></i>Banner</div>
+      <!-- <div class="nav-item" onclick="goSection('banners',this)"><i class="ti ti-photo"></i>Banner</div> -->
       <div class="nav-item" onclick="goSection('promotions',this)"><i class="ti ti-ticket"></i>Mã giảm giá</div>
       <div class="nav-item" onclick="goSection('reviews',this)">
         <i class="ti ti-star"></i>Đánh giá<span class="badge" id="rv-badge">0</span>
@@ -421,7 +421,7 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="user-name">Admin</div>
       <div class="user-role">Super Admin</div>
     </div>
-    <button class="logout-btn" title="Đăng xuất" onclick="logout()">
+    <button class="logout-btn" title="Đăng xuất" onclick="logoutService()">
       <i class="ti ti-logout"></i>
     </button>
   </div>
@@ -463,25 +463,78 @@ textarea.form-control{resize:vertical;min-height:80px}
       <div class="stats-row" id="stats-row">
         <!-- Sẽ render từ JS -->
       </div>
+      <div class="glass-card">
+        <div class="sec-header">
+          <span class="sec-title">Doanh thu tổng quan</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            <div class="tab-pills" id="revenue-tabs" style="margin:0">
+              <button class="tab-pill active" onclick="filterRevenueRange('day',this)">Theo ngày</button>
+              <button class="tab-pill" onclick="filterRevenueRange('week',this)">Theo tuần</button>
+              <button class="tab-pill" onclick="filterRevenueRange('month',this)">Theo tháng</button>
+            </div>
+            <!-- <button class="btn btn-glass btn-sm" onclick="downloadRevenueReport('pdf')"><i class="ti ti-file-type-pdf"></i>PDF</button> -->
+            <button class="btn btn-glass btn-sm" onclick="downloadRevenueReport('excel')"><i class="ti ti-file-spreadsheet"></i>Excel</button>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="glass-card" style="margin:0">
+            <div class="sec-header">
+              <span class="sec-title">Biểu đồ doanh thu</span>
+              <span style="font-size:12px;color:var(--text-light)">Triệu VND</span>
+            </div>
+            <div class="chart-row" id="rev-chart"></div>
+            <div style="display:flex;gap:6px" id="rev-labels"></div>
+          </div>
+          <div class="glass-card" style="margin:0">
+            <div class="sec-header">
+              <span class="sec-title">Đơn hàng gần đây</span>
+              <button class="btn btn-glass btn-sm" onclick="goSection('orders',null)">Xem tất cả</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Khách</th><th>Tổng</th><th>Trạng thái</th></tr></thead>
+                <tbody id="dash-orders"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid2">
         <div class="glass-card">
           <div class="sec-header">
-            <span class="sec-title">Doanh thu 7 ngày</span>
-            <span style="font-size:12px;color:var(--text-light)">Triệu VND</span>
-          </div>
-          <div class="chart-row" id="rev-chart"></div>
-          <div style="display:flex;gap:6px" id="rev-labels"></div>
-        </div>
-        <div class="glass-card">
-          <div class="sec-header">
-            <span class="sec-title">Đơn hàng gần đây</span>
-            <button class="btn btn-glass btn-sm" onclick="goSection('orders',null)">Xem tất cả</button>
+            <span class="sec-title">Doanh thu theo sản phẩm</span>
+            <button class="btn btn-glass btn-sm" onclick="reloadRevenueByProduct()">Làm mới</button>
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>#</th><th>Khách</th><th>Tổng</th><th>Trạng thái</th></tr></thead>
-              <tbody id="dash-orders"></tbody>
+              <thead><tr><th>Sản phẩm</th><th>Đơn</th><th>Doanh thu</th><th>Tỷ trọng</th></tr></thead>
+              <tbody id="revenue-products-table"></tbody>
             </table>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="sec-header">
+            <span class="sec-title">Báo cáo tự động</span>
+            <span id="report-status" class="status-pill pill-blue">Đang chờ</span>
+          </div>
+          <div class="ws-area" style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px">
+              <span>Email nhận báo cáo</span>
+              <strong id="report-email">admin@example.com</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:8px">
+              <span>Lịch gửi</span>
+              <strong>00:00 mỗi ngày</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;margin-top:8px">
+              <span>Trạng thái lần gửi gần nhất</span>
+              <strong id="report-last-run">Chưa có dữ liệu</strong>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="sendDailyRevenueReport(true)"><i class="ti ti-mail"></i>Gửi báo cáo ngay</button>
+            <button class="btn btn-glass" onclick="refreshAdminReportConfig()"><i class="ti ti-refresh"></i>Làm mới cấu hình</button>
           </div>
         </div>
       </div>
@@ -596,6 +649,11 @@ textarea.form-control{resize:vertical;min-height:80px}
           <button class="tab-pill active" onclick="filterReviews('all',this)">Tất cả</button>
           <button class="tab-pill" onclick="filterReviews('active',this)">Hiển thị</button>
           <button class="tab-pill" onclick="filterReviews('hidden',this)">Đã ẩn</button>
+          <button class="tab-pill" onclick="filterReviewStars('5',this)">5 sao</button>
+          <button class="tab-pill" onclick="filterReviewStars('4',this)">4 sao</button>
+          <button class="tab-pill" onclick="filterReviewStars('3',this)">3 sao</button>
+          <button class="tab-pill" onclick="filterReviewStars('2',this)">2 sao</button>
+          <button class="tab-pill" onclick="filterReviewStars('1',this)">1 sao</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -755,6 +813,13 @@ textarea.form-control{resize:vertical;min-height:80px}
     </div>
     <div class="form-group"><label class="form-label">Tên banner</label><input class="form-control" id="bnr-name" placeholder="Banner mùa hè 2025"></div>
     <div class="form-group"><label class="form-label">URL hình ảnh</label><input class="form-control" id="bnr-img" placeholder="https://..."></div>
+    <div class="form-group">
+      <label class="form-label">Tải ảnh lên</label>
+      <input class="form-control" id="bnr-file" type="file" accept="image/*">
+      <div style="margin-top:10px">
+        <img id="bnr-preview" alt="preview" style="display:none;max-width:100%;border-radius:12px;border:1px solid rgba(148,163,184,.25);object-fit:cover;max-height:180px;">
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Trang hiển thị</label><input class="form-control" id="bnr-site" placeholder="trang-chu"></div>
       <div class="form-group"><label class="form-label">Ưu tiên</label><input class="form-control" id="bnr-prio" type="number" value="1" min="1"></div>

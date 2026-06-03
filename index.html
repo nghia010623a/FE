@@ -119,14 +119,32 @@
     </div>
     <div class="hidden md:flex items-center gap-8">
     <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Trang chủ</a>
+    <div id="menu-nav-wrapper" class="relative" onmouseenter="showMenuCategoryNav()" onmouseleave="hideMenuCategoryNav()">
     <a class="text-sm font-semibold hover:text-primary transition-colors" onclick="navigate(event, '#menu')" style="cursor: pointer;" >Thực đơn</a>
+    <div id="menu-category-hover" class="absolute top-full left-1/2 -translate-x-1/2 mt-4 hidden rounded-2xl border border-white/50 bg-white/90 backdrop-blur-xl shadow-xl p-3 min-w-[520px] z-[80]" onmouseenter="cancelMenuCategoryHide()" onmouseleave="hideMenuCategoryNav()">
+        <div class="grid grid-cols-3 gap-2 text-sm">
+            <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'all')">Tất cả</button>
+            <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'best-seller')">Best seller</button>
+            <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'1')">Trà sữa</button>
+            <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'2')">Trà trái cây</button>
+            <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'3')">Kem</button>
+            <button class="px-3 py-2 rounded-xl hover:bg-sky-100 text-left font-semibold" onclick="selectHoverCategory(event,'4')">Topping</button>
+        </div>
+    </div>
+    </div>
     <a class="text-sm font-semibold hover:text-primary transition-colors" onclick="navigate(event, '#About') "style="cursor: pointer;">Về chúng tôi</a>
     <!-- <a class="text-sm font-semibold hover:text-primary transition-colors" href="#" style="">Ưu đãi</a> -->
     </div>
     <div class="flex items-center gap-4">
-    <!-- <button class="p-2 hover:bg-primary/20 rounded-full transition-colors" style="">
+    <div class="relative">
+    <button id="productSearchToggle" onclick="toggleProductSearch(event)" class="p-2 hover:bg-primary/20 rounded-full transition-colors" style="">
     <span class="material-symbols-outlined" style="">search</span>
-    </button> -->
+    </button>
+    <div id="productSearchPanel" class="hidden absolute right-0 top-full mt-3 w-[340px] rounded-2xl bg-white/95 backdrop-blur-xl border border-white/70 shadow-2xl p-3 z-[90]">
+        <input id="productSearchInput" oninput="renderProductSearchSuggestions(this.value)" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400" placeholder="Tìm sản phẩm..." autocomplete="off">
+        <div id="productSearchResults" class="mt-2 max-h-[360px] overflow-y-auto"></div>
+    </div>
+    </div>
     <button id="user-notif-btn" onclick="toggleUserNotifPanel()" class="relative p-2 hover:bg-primary/20 rounded-full transition-colors" style="">
         <span class="material-symbols-outlined" style="">notifications</span>
         <span id="user-notif-count" class="absolute top-1 right-1 size-4 bg-primary text-[10px] text-white rounded-full flex items-center justify-center font-bold" style="">0</span>
