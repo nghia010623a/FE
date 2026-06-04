@@ -74,6 +74,7 @@ let currentReviewStarFilter = 'all';
 let cachedReviewRows = [];
 let dailyReportWatcher = null;
 let dailyReportLastRunKey = null;
+const DONUT_COLORS = ['#38bdf8', '#0ea5e9', '#0284c7', '#22c55e', '#f59e0b', '#8b5cf6', '#ef4444', '#14b8a6'];
 
 // ============================================================
 //  NAVIGATION
@@ -269,6 +270,7 @@ async function renderRevenueByProduct(range = currentRevenueRange) {
   const rows = Array.isArray(data) ? data : [];
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-light);padding:24px">Chưa có dữ liệu doanh thu theo sản phẩm</td></tr>';
+    renderRevenueDonut([]);
     return;
   }
 
@@ -284,6 +286,68 @@ async function renderRevenueByProduct(range = currentRevenueRange) {
       <td><span class="status-pill pill-blue">${share}%</span></td>
     </tr>`;
   }).join('');
+
+  renderRevenueDonut(rows);
+}
+
+function renderRevenueDonut(rows) {
+  const donut = document.getElementById('revenue-donut');
+  const totalEl = document.getElementById('revenue-donut-total');
+  const captionEl = document.getElementById('revenue-donut-caption');
+  const legend = document.getElementById('revenue-donut-legend');
+  if (!donut || !totalEl || !captionEl || !legend) return;
+
+  const items = (Array.isArray(rows) ? rows : [])
+    .map(row => ({
+      name: row.productName || row.name || 'Sản phẩm',
+      quantity: Number(row.quantity || row.count || row.orders || 0),
+      revenue: Number(row.revenue || row.amount || 0),
+    }))
+    .filter(row => row.quantity > 0)
+    .sort((a, b) => b.quantity - a.quantity);
+
+  if (!items.length) {
+    donut.style.background = 'conic-gradient(#dbeafe 0deg 360deg)';
+    totalEl.textContent = '0';
+    captionEl.textContent = 'Sản phẩm đã bán';
+    legend.innerHTML = '<div class="empty" style="padding:18px 10px"><i class="ti ti-chart-pie"></i>Chưa có dữ liệu bán ra</div>';
+    return;
+  }
+
+  const totalQty = items.reduce((sum, row) => sum + row.quantity, 0);
+  totalEl.textContent = totalQty.toLocaleString('vi-VN');
+  captionEl.textContent = 'Tổng số lượng sản phẩm đã bán';
+
+  const topItems = items.slice(0, 6);
+  let currentDeg = 0;
+  const segments = topItems.map((item, index) => {
+    const share = item.quantity / totalQty;
+    const start = currentDeg;
+    const end = currentDeg + (share * 360);
+    currentDeg = end;
+    return `${DONUT_COLORS[index % DONUT_COLORS.length]} ${start}deg ${end}deg`;
+  });
+  if (currentDeg < 360) {
+    segments.push(`#dbeafe ${currentDeg}deg 360deg`);
+  }
+  donut.style.background = `conic-gradient(${segments.join(', ')})`;
+
+  legend.innerHTML = topItems.map((item, index) => {
+    const share = Math.round((item.quantity / totalQty) * 100);
+    return `
+      <div class="donut-legend-item">
+        <span class="donut-legend-swatch" style="background:${DONUT_COLORS[index % DONUT_COLORS.length]}"></span>
+        <div class="donut-legend-name">${item.name}</div>
+        <div class="donut-legend-meta">${item.quantity.toLocaleString('vi-VN')} lượt · ${share}%</div>
+      </div>
+    `;
+  }).join('') + (items.length > topItems.length ? `
+    <div class="donut-legend-item">
+      <span class="donut-legend-swatch" style="background:#dbeafe"></span>
+      <div class="donut-legend-name">Khác</div>
+      <div class="donut-legend-meta">${(items.slice(6).reduce((sum, row) => sum + row.quantity, 0)).toLocaleString('vi-VN')} lượt</div>
+    </div>
+  ` : '');
 }
 
 function reloadRevenueByProduct() {

@@ -350,6 +350,82 @@ input:checked+.slider-sw::before{transform:translateX(18px)}
 .promo-target-item strong{font-size:13px;color:var(--text-dark)}
 .promo-target-item span{font-size:11px;color:var(--text-light);display:block;margin-top:2px}
 
+/* REVENUE DONUT */
+.donut-wrap{
+  display:grid;
+  grid-template-columns: 220px 1fr;
+  gap:16px;
+  align-items:center;
+  margin-bottom:16px;
+}
+.donut-chart{
+  width:220px;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:conic-gradient(#dbeafe 0deg 360deg);
+  position:relative;
+  margin:0 auto;
+}
+.donut-chart::after{
+  content:'';
+  position:absolute;
+  inset:48px;
+  border-radius:50%;
+  background:rgba(240,249,255,0.98);
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,0.12);
+}
+.donut-center{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:22px;
+  z-index:1;
+}
+.donut-center strong{
+  display:block;
+  font-family:'Quicksand',sans-serif;
+  font-size:26px;
+  color:var(--text-dark);
+  line-height:1.05;
+}
+.donut-center span{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:var(--text-light);
+  line-height:1.45;
+}
+.donut-legend{
+  display:grid;
+  gap:8px;
+}
+.donut-legend-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 10px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.42);
+  border:1px solid rgba(255,255,255,0.35);
+}
+.donut-legend-swatch{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+}
+.donut-legend-name{
+  flex:1;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text-dark);
+}
+.donut-legend-meta{
+  font-size:12px;
+  color:var(--text-light);
+  white-space:nowrap;
+}
+
 /* EMPTY */
 .empty{text-align:center;padding:40px;color:var(--text-light);font-size:13px}
 .empty i{font-size:40px;margin-bottom:8px;opacity:0.4;display:block}
@@ -526,6 +602,17 @@ textarea.form-control{resize:vertical;min-height:80px}
           <div class="sec-header">
             <span class="sec-title">Doanh thu theo sản phẩm</span>
             <button class="btn btn-glass btn-sm" onclick="reloadRevenueByProduct()">Làm mới</button>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut-chart" id="revenue-donut">
+              <div class="donut-center">
+                <div>
+                  <strong id="revenue-donut-total">0</strong>
+                  <span id="revenue-donut-caption">Sản phẩm đã bán</span>
+                </div>
+              </div>
+            </div>
+            <div class="donut-legend" id="revenue-donut-legend"></div>
           </div>
           <div class="table-wrap">
             <table>
