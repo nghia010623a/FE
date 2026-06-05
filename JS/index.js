@@ -688,6 +688,7 @@ async function loadPage(url) {
     if (path === "account-detail" || path === "accountDetail") page = "HTML/accountDetail.html";
     else if (path === "update-profile") page = "HTML/updateProfile.html";
     else if (path === "menu") page = "HTML/menu.html";
+    else if (path === "search") page = "HTML/search.html";
     else if (path === "icecream") page = "HTML/icecream.html";
     else if (path === "cart") page = "HTML/cart.html";
     else if (path === "notification") page = "HTML/notification.html";
@@ -855,6 +856,9 @@ function handlePostLoadLogic(path) {
     }
     
     }
+    if (path === "search") {
+        initSearchResultsPage();
+    }
     if (path === "order-detail") {
         // Lấy orderId từ biến toàn cục đã lưu ở loadPage
         const params = window.currentQueryParams;
@@ -915,6 +919,16 @@ document.addEventListener("DOMContentLoaded", function() {
     maintainNav();
     refreshToken();
     initAiChatWidget();
+    const globalSearchInput = document.getElementById('productSearchInput');
+    if (globalSearchInput && globalSearchInput.dataset.bound !== 'true') {
+        globalSearchInput.dataset.bound = 'true';
+        globalSearchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                window.goToProductSearch(globalSearchInput.value);
+            }
+        });
+    }
     if (document.getElementById("changePasswordForm")) {
         getDetailAccount();
         initAvatarUpload();
@@ -956,6 +970,15 @@ async function loadProduct() {
 let productSearchCache = [];
 let pendingMenuCategory = null;
 let menuCategoryHideTimer = null;
+let searchPageState = {
+    products: [],
+    query: '',
+    category: 'all',
+    price: 'all',
+    rating: 'all',
+    page: 1,
+    pageSize: 5
+};
 
 async function ensureProductSearchCache() {
     if (!productSearchCache.length) {
@@ -969,35 +992,84 @@ async function getProductById(productId) {
     return products.find(p => Number(p.productId) === Number(productId)) || null;
 }
 
+function normalizeCatalogText(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getPriceBand(price) {
+    const value = Number(price || 0);
+    if (value < 50000) return 'under50';
+    if (value < 80000) return '50to80';
+    return 'over80';
+}
+
+function getProductCategoryKey(item) {
+    const raw = item?.categoryId ?? item?.category ?? item?.categoryName ?? 'all';
+    return String(raw).trim().toLowerCase();
+}
+
+function matchesCatalogFilters(item, filters = {}) {
+    const keyword = normalizeCatalogText(filters.query);
+    const category = String(filters.category || 'all');
+    const price = String(filters.price || 'all');
+    const rating = String(filters.rating || 'all');
+    const name = normalizeCatalogText(item?.productName);
+    const desc = normalizeCatalogText(item?.description || item?.shortDescription);
+    const catName = normalizeCatalogText(item?.categoryName || item?.category);
+
+    if (keyword) {
+        const searchable = `${name} ${desc} ${catName}`;
+        if (!searchable.includes(keyword)) return false;
+    }
+
+    if (category !== 'all' && getProductCategoryKey(item) !== category) {
+        return false;
+    }
+
+    if (price !== 'all' && getPriceBand(item?.price) !== price) {
+        return false;
+    }
+
+    if (rating !== 'all') {
+        const minRating = Number(rating);
+        if (Number(item?.rating || 0) < minRating) return false;
+    }
+
+    return true;
+}
+
 function buildProductCardHTML(item, options = {}) {
     const compact = Boolean(options.compact);
     const imageUrl = resolveAssetUrl(item.imageUrl, '../binglogo.png');
     const rating = Number(item.rating || 0);
     const categoryText = item.categoryName || item.category || 'BingChun';
     const desc = item.description || item.shortDescription || 'Món được yêu thích từ BingChun.';
+    const cardPadding = compact ? 'p-3' : 'p-4';
+    const titleSize = compact ? 'text-[14px]' : 'text-[15px]';
+    const priceSize = compact ? 'text-[18px]' : 'text-[20px]';
 
     return `
-      <article data-product-id="${item.productId}" data-category="${item.category || ''}" class="product-card group relative overflow-hidden rounded-[2rem] bg-white/70 border border-white/60 shadow-[0_16px_40px_rgba(15,23,42,.08)] backdrop-blur-xl cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,.14)]">
+      <article data-product-id="${item.productId}" data-category="${item.category || item.categoryId || ''}" class="product-card group relative overflow-hidden rounded-[2rem] bg-white/70 border border-white/60 shadow-[0_16px_40px_rgba(15,23,42,.08)] backdrop-blur-xl cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,.14)] h-full">
         <div class="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-sky-100/40 pointer-events-none"></div>
-        <div class="relative p-4">
-          <div class="relative aspect-square rounded-[1.5rem] overflow-hidden bg-slate-50 border border-white/70">
-            <img src="${imageUrl}" alt="${escapeHtml(item.productName || '')}" class="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105">
+        <div class="relative ${cardPadding} flex flex-col h-full">
+          <div class="relative ${compact ? 'aspect-[4/5]' : 'aspect-square'} rounded-[1.5rem] overflow-hidden bg-slate-50 border border-white/70">
+            <img src="${imageUrl}" alt="${escapeHtml(item.productName || '')}" class="w-full h-full object-contain ${compact ? 'p-2' : 'p-3'} transition-transform duration-500 group-hover:scale-105">
             <div class="absolute top-3 left-3 text-[10px] font-extrabold uppercase tracking-[0.14em] px-2.5 py-1 rounded-full bg-white/90 text-sky-700 shadow">
               ${escapeHtml(categoryText)}
             </div>
           </div>
-          <div class="pt-4">
+          <div class="pt-4 flex flex-col flex-1">
             <div class="text-[11px] text-slate-500 font-semibold mb-1">Mã #${item.productId}</div>
-            <h3 class="text-[15px] font-extrabold text-slate-900 leading-snug line-clamp-2 min-h-[40px]">${escapeHtml(item.productName || '')}</h3>
+            <h3 class="${titleSize} font-extrabold text-slate-900 leading-snug line-clamp-2 min-h-[40px]">${escapeHtml(item.productName || '')}</h3>
             <div class="flex items-center gap-2 mt-2 cursor-pointer select-none" data-rating="${rating}" onclick="event.stopPropagation(); openProductReviewsModal(${item.productId})" title="Xem và đánh giá">
               <span class="text-amber-500 text-xs">${simpleStarText(rating)}</span>
               <span class="text-[12px] text-slate-500">${rating.toFixed(1)}</span>
             </div>
             <p class="text-[12px] text-slate-500 mt-2 line-clamp-2 min-h-[32px]">${escapeHtml(desc)}</p>
-            <div class="flex items-end justify-between gap-3 mt-4">
+            <div class="flex items-end justify-between gap-3 mt-4 mt-auto">
               <div>
                 <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Giá</div>
-                <div class="text-[20px] font-black text-primary">${Number(item.price || 0).toLocaleString('vi-VN')}đ</div>
+                <div class="${priceSize} font-black text-primary">${Number(item.price || 0).toLocaleString('vi-VN')}đ</div>
               </div>
               <button class="add-to-cart-btn shrink-0 w-11 h-11 rounded-2xl text-white grid place-items-center shadow-lg transition-transform hover:scale-105 active:scale-95" data-product-id="${item.productId}" style="background:linear-gradient(135deg,#38bdf8,#006977)">
                 <span class="material-symbols-outlined">add_shopping_cart</span>
@@ -1068,6 +1140,174 @@ window.renderProductSearchSuggestions = async function(query) {
     `).join('') : '<div style="padding:14px;color:#64748b;font-size:13px">Không tìm thấy sản phẩm phù hợp.</div>';
 };
 
+window.goToProductSearch = function(query = '') {
+    const keyword = String(query || '').trim();
+    const target = `#search?q=${encodeURIComponent(keyword)}`;
+    navigate(null, target);
+};
+
+function getSearchFilterOptions(products) {
+    const categories = new Map();
+    products.forEach(item => {
+        const key = getProductCategoryKey(item);
+        if (!categories.has(key)) {
+            categories.set(key, {
+                key,
+                label: item?.categoryName || item?.category || `Danh mục ${key}`,
+            });
+        }
+    });
+    return Array.from(categories.values());
+}
+
+function renderSearchPagination(totalItems) {
+    const host = document.getElementById('search-pagination');
+    if (!host) return;
+    const totalPages = Math.max(1, Math.ceil(totalItems / searchPageState.pageSize));
+    if (searchPageState.page > totalPages) searchPageState.page = totalPages;
+    host.innerHTML = `
+      <button type="button" class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold disabled:opacity-40" ${searchPageState.page <= 1 ? 'disabled' : ''} onclick="window.__bingSearchGoPage(${searchPageState.page - 1})">Trước</button>
+      <div class="px-4 py-2 rounded-xl bg-slate-100 text-sm font-semibold text-slate-600">${searchPageState.page} / ${totalPages}</div>
+      <button type="button" class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold disabled:opacity-40" ${searchPageState.page >= totalPages ? 'disabled' : ''} onclick="window.__bingSearchGoPage(${searchPageState.page + 1})">Sau</button>
+    `;
+}
+
+function renderSearchSuggestions(products = []) {
+    const wrap = document.getElementById('search-suggestion-wrap');
+    const grid = document.getElementById('search-suggestion-grid');
+    if (!wrap || !grid) return;
+    const list = (products || [])
+        .slice()
+        .sort((a, b) => (Number(b.rating || 0) - Number(a.rating || 0)) || (Number(a.price || 0) - Number(b.price || 0)))
+        .slice(0, 5);
+    if (!list.length) {
+        wrap.classList.add('hidden');
+        grid.innerHTML = '';
+        return;
+    }
+    wrap.classList.remove('hidden');
+    grid.innerHTML = list.map(item => buildProductCardHTML(item, { compact: true })).join('');
+}
+
+window.__bingSearchGoPage = function(page) {
+    searchPageState.page = Math.max(1, page);
+    renderSearchResultsPage();
+};
+
+function renderSearchResultsPage() {
+    const grid = document.getElementById('search-results-grid');
+    const empty = document.getElementById('search-empty');
+    const counter = document.getElementById('search-result-count');
+    const summary = document.getElementById('search-summary');
+    if (!grid) return;
+
+    const filtered = (searchPageState.products || []).filter(item => matchesCatalogFilters(item, searchPageState));
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / searchPageState.pageSize));
+    if (searchPageState.page > totalPages) searchPageState.page = totalPages;
+    const start = (searchPageState.page - 1) * searchPageState.pageSize;
+    const pageItems = filtered.slice(start, start + searchPageState.pageSize);
+
+    if (counter) {
+        counter.textContent = `${total.toLocaleString('vi-VN')} sản phẩm`;
+    }
+    if (summary) {
+        const parts = [];
+        if (searchPageState.query) parts.push(`từ khóa "${searchPageState.query}"`);
+        if (searchPageState.category !== 'all') parts.push(`danh mục ${searchPageState.category}`);
+        if (searchPageState.price !== 'all') parts.push(`mức giá ${searchPageState.price}`);
+        if (searchPageState.rating !== 'all') parts.push(`đánh giá từ ${searchPageState.rating} sao`);
+        summary.textContent = parts.length ? `Bộ lọc hiện tại: ${parts.join(' • ')}` : 'Hiển thị toàn bộ sản phẩm theo nhu cầu tìm kiếm của bạn.';
+    }
+
+    if (!total) {
+        grid.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        renderSearchSuggestions((searchPageState.products || []).filter(item => Number(item.rating || 0) >= 4));
+        renderSearchPagination(total);
+        return;
+    }
+
+    if (empty) empty.style.display = 'none';
+    grid.innerHTML = pageItems.map(item => buildProductCardHTML(item, { compact: true })).join('');
+    renderSearchSuggestions([]);
+    renderSearchPagination(total);
+}
+
+function bindSearchPageFilters() {
+    const categoryEl = document.getElementById('search-category-filter');
+    const priceEl = document.getElementById('search-price-filter');
+    const ratingEl = document.getElementById('search-rating-filter');
+    const queryEl = document.getElementById('search-keyword');
+    const submitBtn = document.getElementById('search-submit');
+    const resetBtn = document.getElementById('search-reset');
+
+    const apply = () => {
+        searchPageState.query = (queryEl?.value || '').trim();
+        searchPageState.category = categoryEl?.value || 'all';
+        searchPageState.price = priceEl?.value || 'all';
+        searchPageState.rating = ratingEl?.value || 'all';
+        searchPageState.page = 1;
+        renderSearchResultsPage();
+    };
+
+    categoryEl?.addEventListener('change', apply);
+    priceEl?.addEventListener('change', apply);
+    ratingEl?.addEventListener('change', apply);
+    queryEl?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            apply();
+        }
+    });
+    submitBtn?.addEventListener('click', apply);
+    resetBtn?.addEventListener('click', () => {
+        if (queryEl) queryEl.value = searchPageState.query || '';
+        if (categoryEl) categoryEl.value = 'all';
+        if (priceEl) priceEl.value = 'all';
+        if (ratingEl) ratingEl.value = 'all';
+        searchPageState.category = 'all';
+        searchPageState.price = 'all';
+        searchPageState.rating = 'all';
+        searchPageState.page = 1;
+        renderSearchResultsPage();
+    });
+}
+
+async function initSearchResultsPage() {
+    const root = document.getElementById('search-page-root');
+    if (!root) return;
+    const products = await ensureProductSearchCache();
+    const params = window.currentQueryParams || new URLSearchParams();
+    const keyword = (params.get('q') || '').trim();
+    searchPageState = {
+        products: Array.isArray(products) ? products : [],
+        query: keyword,
+        category: 'all',
+        price: 'all',
+        rating: 'all',
+        page: 1,
+        pageSize: 5
+    };
+
+    const categoryOptions = getSearchFilterOptions(searchPageState.products);
+    const categorySelect = document.getElementById('search-category-filter');
+    if (categorySelect) {
+        categorySelect.innerHTML = [
+            `<option value="all">Tất cả danh mục</option>`,
+            ...categoryOptions.map(opt => `<option value="${escapeHtml(opt.key)}">${escapeHtml(opt.label)}</option>`)
+        ].join('');
+    }
+
+    const keywordInput = document.getElementById('search-keyword');
+    if (keywordInput) keywordInput.value = keyword;
+    const queryLabel = document.getElementById('search-keyword-label');
+    if (queryLabel) queryLabel.textContent = keyword ? `Kết quả tìm kiếm cho "${keyword}"` : 'Khám phá tất cả sản phẩm';
+
+    bindSearchPageFilters();
+    renderSearchResultsPage();
+}
+
 window.openSearchProduct = function(productId) {
     document.getElementById('productSearchPanel')?.classList.add('hidden');
     openProductDetailModal(productId);
@@ -1124,6 +1364,11 @@ document.addEventListener('click', (event) => {
 async function initDynamicMenu() {
     const renderContainer = document.getElementById("render-container");
     const categoryBtns = document.querySelectorAll(".category-btn");
+    const keywordInput = document.getElementById('menu-search-input');
+    const priceFilter = document.getElementById('menu-price-filter');
+    const ratingFilter = document.getElementById('menu-rating-filter');
+    const categorySummary = document.getElementById('menu-filter-summary');
+    const resetBtn = document.getElementById('menu-filter-reset');
 
     if (!renderContainer) return;
 
@@ -1199,30 +1444,65 @@ async function initDynamicMenu() {
 
 
     // ── 4. LOGIC RENDER (Hỗ trợ "all" và filter) ──
+    const getCurrentFilters = () => ({
+        query: keywordInput?.value || '',
+        category: categoryIdValue || 'all',
+        price: priceFilter?.value || 'all',
+        rating: ratingFilter?.value || 'all'
+    });
+
+    let categoryIdValue = pendingMenuCategory || 'all';
+
     const renderContent = (categoryId) => {
         pendingMenuCategory = categoryId;
+        categoryIdValue = categoryId;
         categoryBtns.forEach(btn => {
             btn.classList.toggle("active", btn.getAttribute("data-category") === String(categoryId));
         });
         renderContainer.style.opacity = 0;
         setTimeout(() => {
-            let items = [];
-            if (categoryId === "all") {
-                items = viewsData;
-            } else if (categoryId === "best-seller") {
-                items = viewsData.filter(item => Number(item.rating || 0) >= 4);
-            } else {
-                items = viewsData.filter(item => {
-                    return Number(item.category) === Number(categoryId);
-                });
+            const filters = getCurrentFilters();
+            let items = viewsData;
+            if (categoryId === "best-seller") {
+                items = items.filter(item => Number(item.rating || 0) >= 4);
+            } else if (categoryId !== "all") {
+                items = items.filter(item => getProductCategoryKey(item) === String(categoryId).toLowerCase());
             }
+            items = items.filter(item => matchesCatalogFilters(item, filters));
 
+            if (categorySummary) {
+                const parts = [];
+                if (filters.query) parts.push(`"${filters.query}"`);
+                if (filters.price !== 'all') parts.push(`mức giá ${filters.price}`);
+                if (filters.rating !== 'all') parts.push(`từ ${filters.rating} sao`);
+                categorySummary.textContent = parts.length ? `Đang lọc: ${parts.join(' • ')}` : 'Hiển thị toàn bộ danh mục';
+            }
             renderContainer.innerHTML = items.length
                 ? items.map(item => createProductCard(item)).join('')
                 : "<p class='col-span-full text-center py-20 text-on-surface-variant'>Không tìm thấy sản phẩm phù hợp...</p>";
 
             renderContainer.style.opacity = 1;
         }, 200);
+    };
+
+    const bindFilters = () => {
+        const rerender = () => renderContent(categoryIdValue || 'all');
+        keywordInput?.addEventListener('input', rerender);
+        keywordInput?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                window.goToProductSearch(keywordInput.value);
+            }
+        });
+        priceFilter?.addEventListener('change', rerender);
+        ratingFilter?.addEventListener('change', rerender);
+        resetBtn?.addEventListener('click', () => {
+            if (keywordInput) keywordInput.value = '';
+            if (priceFilter) priceFilter.value = 'all';
+            if (ratingFilter) ratingFilter.value = 'all';
+            categoryIdValue = 'all';
+            renderContent('all');
+        });
     };
 
     // Gán sự kiện click cho các nút phân loại
@@ -1233,6 +1513,7 @@ async function initDynamicMenu() {
         });
     });
     window.renderMenuCategory = renderContent;
+    bindFilters();
 
     // Mặc định load "Tất cả" sản phẩm khi vào trang
     renderContent(pendingMenuCategory || "all");
@@ -1911,8 +2192,8 @@ async function persistCartItem(productId) {
     }
 
     try {
-        await fetch(API_BASE + "api/users/cart", {
-            method: "POST",
+        await fetch(API_BASE + "api/users/cart/updateQuantity", {
+            method: "PUT",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -2852,8 +3133,8 @@ window.updateQty = async (productId, change) => {
         return;
     }
     try {
-        const res = await fetch(`${API_BASE}api/users/cart`, {
-            method: 'POST', credentials: 'include',
+        const res = await fetch(`${API_BASE}api/users/cart/updateQuantity`, {
+            method: 'PUT', credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 productId,
@@ -2961,6 +3242,13 @@ function getCheckoutCustomerInfo() {
     };
 }
 
+function sanitizeCheckoutText(value) {
+    return String(value ?? '')
+        .replace(/[;]/g, ',')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 // Hàm tổng hợp payload gửi lên server
 function buildOrderPayload() {
     const selectedItems = cartData.filter(p => p.isSelected);
@@ -2984,18 +3272,28 @@ function buildOrderPayload() {
         amount: total,
         paymentMethod: payMethod,           // 'cod' | 'bank'
         deliveryMode,                        // 'ship' | 'takeaway'
-        customerName: customerInfo.customerName,
-        customerEmail: customerInfo.customerEmail,
+        customerName: sanitizeCheckoutText(customerInfo.customerName),
+        customerEmail: sanitizeCheckoutText(customerInfo.customerEmail),
         customerPhone: customerInfo.customerPhone,
-        address: deliveryMode === 'ship' ? selectedAddr : null,
-        pickupTime: deliveryMode === 'takeaway' ? selectedPickup : null,
+        address: deliveryMode === 'ship' && selectedAddr ? {
+            ...selectedAddr,
+            name: sanitizeCheckoutText(selectedAddr.name),
+            phone: sanitizeCheckoutText(selectedAddr.phone),
+            address: sanitizeCheckoutText(selectedAddr.address)
+        } : null,
+        pickupTime: deliveryMode === 'takeaway' && selectedPickup ? {
+            ...selectedPickup,
+            date: sanitizeCheckoutText(selectedPickup.date),
+            time: sanitizeCheckoutText(selectedPickup.time),
+            dayLabel: sanitizeCheckoutText(selectedPickup.dayLabel)
+        } : null,
         voucherCode: appliedVoucher?.code || null,
         items: selectedItems.map(p => ({
             productId: p.productId,
             quantity: getCartItemQuantity(p),
             price: getCartItemPrice(p),
             size: getCartItemSize(p),
-            note: p.note || null,
+            note: sanitizeCheckoutText(p.note || '') || null,
             toppings: getCartItemToppings(p)
         })),
         subtotal,

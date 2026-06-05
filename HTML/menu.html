@@ -201,6 +201,43 @@
 
   </div>
   
+<div class="max-w-7xl mx-auto px-6 mb-8">
+  <div class="rounded-[28px] border border-white/50 bg-white/70 backdrop-blur-xl shadow-[0_20px_50px_rgba(15,23,42,.08)] p-4 md:p-6">
+    <div class="flex flex-col lg:flex-row gap-4 lg:items-end">
+      <div class="flex-1">
+        <label class="block text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-2">Tìm trong menu</label>
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+          <input id="menu-search-input" type="text" placeholder="Nhập tên sản phẩm, ví dụ: trà sữa, matcha..." class="w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-4 py-3 text-sm outline-none focus:border-sky-400">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 w-full lg:w-auto">
+        <div>
+          <label class="block text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-2">Mức giá</label>
+          <select id="menu-price-filter" class="w-full min-w-[180px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-400">
+            <option value="all">Tất cả</option>
+            <option value="under50">Dưới 50.000đ</option>
+            <option value="50to80">50.000đ - 80.000đ</option>
+            <option value="over80">Trên 80.000đ</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[12px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-2">Đánh giá</label>
+          <select id="menu-rating-filter" class="w-full min-w-[160px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-400">
+            <option value="all">Tất cả</option>
+            <option value="4">Từ 4 sao</option>
+            <option value="3">Từ 3 sao</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="menu-filter-reset" class="w-full rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700 hover:bg-sky-100 transition">Xóa lọc</button>
+        </div>
+      </div>
+    </div>
+    <div id="menu-filter-summary" class="mt-4 text-sm text-slate-500">Hiển thị toàn bộ danh mục</div>
+  </div>
+</div>
+
 <div class="max-w-7xl mx-auto px-6 pb-32">
    <div id="render-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-opacity duration-500" 
         style="background: rgba(235, 240, 242, 0) !important; backdrop-filter: blur(20px); border-radius: 40px; border: 1px solid rgba(255, 255, 255, 0.217); padding: 50px;">

@@ -1295,13 +1295,18 @@ function connectAdminSocket() {
     adminStompClient.subscribe('/noticeall/notifications', message => {
       const payload = parseSocketPayload(message);
       wsLog(`Broadcast nhận: ${payload.title || ''}`);
-      addSystemNotif(payload.title || 'Thông báo', payload.content || '');
+      addSystemNotif(payload.title || 'Thông báo', payload.content || '', {
+        source: 'socket',
+        type: payload.type || 'ADMIN_NOTIFICATION'
+      });
     });
     adminStompClient.subscribe('/noticeall/admin/orders', message => {
       const payload = parseSocketPayload(message);
       wsLog(`Đơn mới realtime: ${payload.title || ''}`);
-      addSystemNotif(payload.title || 'Có đơn hàng mới', payload.content || '');
-      toast(payload.title || 'Có đơn hàng mới', 'success');
+      addSystemNotif(payload.title || 'Có đơn hàng mới', payload.content || '', {
+        source: 'socket',
+        type: payload.type || 'NEW_ORDER'
+      });
       renderDashboard();
       renderOrders(currentOrderFilter);
     });
@@ -1325,26 +1330,89 @@ async function globalSearch(q) {
 // ============================================================
 //  NOTIF PANEL
 // ============================================================
-const sysMsgs = [];
-function addSystemNotif(title, content) {
-  sysMsgs.unshift({ title, content, time: nowTime() });
-  renderNotifPanel();
-  document.getElementById('notif-dot').style.display = 'block';
+const ADMIN_NOTIF_STORAGE_KEY = 'bingchun_admin_notifs_v1';
+let sysMsgs = [];
+
+function loadAdminSystemNotifs() {
+  try {
+    const raw = localStorage.getItem(ADMIN_NOTIF_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    sysMsgs = Array.isArray(parsed) ? parsed.map(item => ({
+      id: item.id || `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: item.title || 'Thông báo',
+      content: item.content || '',
+      time: item.time || nowTime(),
+      unread: Boolean(item.unread),
+      source: item.source || 'local'
+    })) : [];
+  } catch (e) {
+    sysMsgs = [];
+  }
 }
+
+function saveAdminSystemNotifs() {
+  try {
+    localStorage.setItem(ADMIN_NOTIF_STORAGE_KEY, JSON.stringify(sysMsgs.slice(0, 50)));
+  } catch (e) {}
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  const unreadCount = sysMsgs.filter(n => n.unread !== false).length;
+  if (unreadCount > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+  } else {
+    badge.style.display = 'none';
+    badge.textContent = '0';
+  }
+}
+
+function addSystemNotif(title, content, options = {}) {
+  const item = {
+    id: options.id || `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title: title || 'Thông báo',
+    content: content || '',
+    time: options.time || nowTime(),
+    unread: options.unread !== false,
+    source: options.source || 'socket',
+    type: options.type || 'system'
+  };
+  sysMsgs.unshift(item);
+  saveAdminSystemNotifs();
+  renderNotifPanel();
+  updateNotifBadge();
+}
+
 function renderNotifPanel() {
   const list = document.getElementById('notif-list');
   if (!list) return;
-  list.innerHTML = sysMsgs.length ? sysMsgs.map(n => `<div class="notif-item"><div class="notif-item-title">${n.title}</div><div class="notif-item-body">${n.content}</div><div class="notif-item-time">${n.time}</div></div>`).join('') : '<div class="empty" style="padding:24px"><i class="ti ti-bell" style="font-size:28px;opacity:0.3;display:block;margin-bottom:6px"></i>Không có thông báo</div>';
+  list.innerHTML = sysMsgs.length ? sysMsgs.map(n => `
+    <div class="notif-item ${n.unread !== false ? 'notif-item-unread' : ''}" onclick="markAdminNotifRead('${n.id}')">
+      <div class="notif-item-title">${n.title}</div>
+      <div class="notif-item-body">${n.content}</div>
+      <div class="notif-item-time">${n.time}</div>
+    </div>`).join('') : '<div class="empty" style="padding:24px"><i class="ti ti-bell" style="font-size:28px;opacity:0.3;display:block;margin-bottom:6px"></i>Không có thông báo</div>';
+  updateNotifBadge();
 }
 function toggleNotif() {
   const p = document.getElementById('notif-panel');
   p.classList.toggle('open');
   if (p.classList.contains('open')) {
-    document.getElementById('notif-dot').style.display = 'none';
+    sysMsgs = sysMsgs.map(n => ({ ...n, unread: false }));
+    saveAdminSystemNotifs();
     renderNotifPanel();
   }
 }
 function closeNotifPanel() { document.getElementById('notif-panel').classList.remove('open'); }
+function markAdminNotifRead(id) {
+  const item = sysMsgs.find(n => n.id === id);
+  if (!item) return;
+  item.unread = false;
+  saveAdminSystemNotifs();
+  renderNotifPanel();
+}
 document.addEventListener('click', e => {
   const panel = document.getElementById('notif-panel'), btn = document.getElementById('notif-btn');
   if (!panel.contains(e.target) && !btn.contains(e.target)) closeNotifPanel();
@@ -1366,6 +1434,8 @@ async function init() {
     const cats = await apiRequest('api/categories?active=true');
     if (cats) document.getElementById('p-cat').innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
   } catch (e) {}
+  loadAdminSystemNotifs();
+  updateNotifBadge();
   ensureAccountsCache().catch(() => {});
   const promoScope = document.getElementById('promo-scope');
   if (promoScope) {

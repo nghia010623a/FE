@@ -133,10 +133,11 @@ body::before{
   cursor:pointer;color:var(--text-mid);font-size:18px;transition:0.2s;
 }
 .notif-btn:hover{background:rgba(255,255,255,0.6)}
-.notif-dot{
-  position:absolute;top:6px;right:6px;width:8px;height:8px;
-  background:#ef4444;border-radius:50%;border:2px solid #fff;
-  display:none;
+.notif-badge{
+  position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;
+  padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;
+  font-size:11px;font-weight:800;display:none;align-items:center;justify-content:center;
+  border:2px solid #fff;line-height:1;box-shadow:0 0 0 3px rgba(239,68,68,.12);
 }
 
 /* WS STATUS */
@@ -281,6 +282,7 @@ tbody td{padding:10px 14px;color:var(--text-dark)}
 .notif-list{max-height:320px;overflow-y:auto}
 .notif-item{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.3);transition:0.15s;cursor:pointer}
 .notif-item:hover{background:rgba(255,255,255,0.4)}
+.notif-item-unread{background:rgba(56,189,248,0.10)}
 .notif-item-title{font-size:13px;font-weight:700;color:var(--text-dark);margin-bottom:2px}
 .notif-item-body{font-size:12px;color:var(--text-light)}
 .notif-item-time{font-size:11px;color:var(--lb4);margin-top:3px}
@@ -539,7 +541,7 @@ textarea.form-control{resize:vertical;min-height:80px}
     </div>
     <div class="notif-btn" onclick="toggleNotif()" id="notif-btn">
       <i class="ti ti-bell"></i>
-      <div class="notif-dot" id="notif-dot"></div>
+      <div class="notif-badge" id="notif-badge">0</div>
     </div>
   </div>
 

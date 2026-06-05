@@ -1,3 +1,3 @@
-const API_BASE = "https://alter-bumper-respiratory-mods.trycloudflare.com/";
+const API_BASE = "https://sweet-addresses-manually-soil.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd
