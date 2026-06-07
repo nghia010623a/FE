@@ -1,3 +1,3 @@
-const API_BASE = "https://regardless-monte-bruce-reynolds.trycloudflare.com/";
+const API_BASE = "https://easily-significantly-sculpture-opposed.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd
