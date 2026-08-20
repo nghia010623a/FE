@@ -1,3 +1,3 @@
-const API_BASE = "hhttps://cdt-aspects-tend-studios.trycloudflare.com/";
+const API_BASE = "https://cdt-aspects-tend-studios.trycloudflare.com/";
 
 // ma giam gia, payos,fix minus pd
