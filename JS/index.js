@@ -1086,7 +1086,7 @@ async function renderRecommendedProducts() {
     if (!host) return;
     host.innerHTML = `
       <div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b;font-size:14px">Đang tải sản phẩm...</div>
-    `;
+    `; 
     try {
         const products = await loadProduct();
         const list = Array.isArray(products) ? products : [];
