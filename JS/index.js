@@ -811,12 +811,12 @@ async function loadHomeBanner() {
             bannerEl.src = imageUrl.startsWith("http") ? imageUrl : `${API_BASE}${imageUrl}`;
         } else {
             // bannerEl.src = `${API_BASE}tstc1.png`;
-            bannerEl.src = `tstc2.jpg`;
+            bannerEl.src = `${API_BASE}k3.png`;
 
         }
     } catch (e) {
         // bannerEl.src = `${API_BASE}tstc1.png`;
-        bannerEl.src = `tstc2.jpg`;
+        bannerEl.src = `${API_BASE}k3.png`;
 
     }
 }
