@@ -815,7 +815,9 @@ async function loadHomeBanner() {
 
         }
     } catch (e) {
-        bannerEl.src = `${API_BASE}tstc1.png`;
+        // bannerEl.src = `${API_BASE}tstc1.png`;
+        bannerEl.src = `tstc1.jpg`;
+
     }
 }
 function handlePostLoadLogic(path) {
