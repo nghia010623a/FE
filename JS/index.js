@@ -836,17 +836,17 @@ function handlePostLoadLogic(path) {
     
     let pm1 = document.getElementById("pm1");
     if (pm1) {
-      pm1.src = `${API_BASE}ts1.png`;
+      pm1.src = `${API_BASE}ts1.jpg`;
       pm1.style.objectFit = "contain";
     }
         let pm2 = document.getElementById("pm2");
     if (pm2) {
-      pm2.src = `${API_BASE}ttc6.png`;
+      pm2.src = `${API_BASE}ttc6.jpg`;
       pm2.style.objectFit = "contain";
     }
     let pm3 = document.getElementById("pm3");
     if (pm3) {
-      pm3.src = `${API_BASE}tstc2.png`;
+      pm3.src = `${API_BASE}tstc2.jpg`;
       pm3.style.objectFit = "contain";
     }
     let pm4 = document.getElementById("pm4");
